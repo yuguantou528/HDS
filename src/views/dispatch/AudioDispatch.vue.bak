@@ -1,0 +1,545 @@
+<template>
+  <div class="audio-dispatch-container">
+    <el-row :gutter="20">
+      <!-- 左侧设备列表 -->
+      <el-col :span="6">
+        <el-card class="device-list-card">
+          <template #header>
+            <div class="card-header">
+              <span>设备列表</span>
+              <el-input
+                v-model="searchKeyword"
+                placeholder="搜索设备"
+                prefix-icon="Search"
+                clearable
+                size="small"
+              />
+            </div>
+          </template>
+          
+          <el-tabs v-model="activeDeviceTab">
+            <el-tab-pane label="全部设备" name="all">
+              <el-tree
+                :data="filteredDevices"
+                :props="{ label: 'name' }"
+                node-key="id"
+                @node-click="handleDeviceClick"
+              >
+                <template #default="{ node, data }">
+                  <div class="device-item">
+                    <el-tag :type="getDeviceStatusType(data.status)" size="small">
+                      {{ data.status === 'online' ? '在线' : data.status === 'busy' ? '忙碌' : '离线' }}
+                    </el-tag>
+                    <span class="device-name">{{ data.name }}</span>
+                    <span class="device-type">{{ getDeviceTypeLabel(data.type) }}</span>
+                  </div>
+                </template>
+              </el-tree>
+            </el-tab-pane>
+            <el-tab-pane label="分组" name="groups">
+              <el-collapse v-model="activeGroups">
+                <el-collapse-item v-for="group in groups" :key="group.id" :title="group.name" :name="group.id">
+                  <div v-for="deviceId in group.devices" :key="deviceId" class="group-device-item">
+                    <div class="device-item">
+                      <el-tag :type="getDeviceStatusType(getDeviceById(deviceId)?.status)" size="small">
+                        {{ getDeviceById(deviceId)?.status === 'online' ? '在线' : getDeviceById(deviceId)?.status === 'busy' ? '忙碌' : '离线' }}
+                      </el-tag>
+                      <span class="device-name">{{ getDeviceById(deviceId)?.name }}</span>
+                    </div>
+                  </div>
+                </el-collapse-item>
+              </el-collapse>
+            </el-tab-pane>
+          </el-tabs>
+        </el-card>
+      </el-col>
+      
+      <!-- 中间通话控制区 -->
+      <el-col :span="12">
+        <el-card class="call-control-card">
+          <template #header>
+            <div class="card-header">
+              <span>通话控制</span>
+            </div>
+          </template>
+          
+          <div class="call-control-content">
+            <div class="selected-devices">
+              <h3>已选设备</h3>
+              <el-empty v-if="selectedDevices.length === 0" description="未选择设备" />
+              <el-tag
+                v-for="device in selectedDevices"
+                :key="device.id"
+                closable
+                @close="removeSelectedDevice(device)"
+              >
+                {{ device.name }}
+              </el-tag>
+            </div>
+            
+            <div class="call-actions">
+              <el-button-group>
+                <el-button type="primary" :disabled="selectedDevices.length !== 1" @click="startIndividualCall">
+                  <el-icon><Phone /></el-icon> 单呼
+                </el-button>
+                <el-button type="success" :disabled="selectedDevices.length < 2" @click="startGroupCall">
+                  <el-icon><ChatDotRound /></el-icon> 组呼
+                </el-button>
+                <el-button type="warning" :disabled="selectedDevices.length < 2" @click="startDynamicGroupCall">
+                  <el-icon><Connection /></el-icon> 动态组呼
+                </el-button>
+                <el-button type="info" :disabled="selectedDevices.length < 2" @click="startMixedGroupCall">
+                  <el-icon><SetUp /></el-icon> 混合编组
+                </el-button>
+              </el-button-group>
+            </div>
+            
+            <div class="call-status" v-if="activeCall">
+              <el-alert
+                :title="'通话中: ' + getCallTypeLabel(activeCall.type)"
+                type="info"
+                :closable="false"
+                show-icon
+              >
+                <div class="call-info">
+                  <p>发起方: {{ getDeviceById(activeCall.caller)?.name }}</p>
+                  <p>接收方: {{ activeCall.receivers.map(id => getDeviceById(id)?.name).join(', ') }}</p>
+                  <p>通话时长: {{ callDuration }}</p>
+                </div>
+                <template #action>
+                  <el-button type="danger" size="small" @click="endCall">结束通话</el-button>
+                </template>
+              </el-alert>
+            </div>
+            
+            <div class="talk-control" v-if="activeCall">
+              <h3>话权控制</h3>
+              <el-table :data="talkControlData" style="width: 100%">
+                <el-table-column prop="name" label="设备名称" />
+                <el-table-column prop="status" label="状态">
+                  <template #default="scope">
+                    <el-tag :type="scope.row.hasTalkRight ? 'success' : 'info'">
+                      {{ scope.row.hasTalkRight ? '有话权' : '无话权' }}
+                    </el-tag>
+                  </template>
+                </el-table-column>
+                <el-table-column label="操作">
+                  <template #default="scope">
+                    <el-button
+                      :type="scope.row.hasTalkRight ? 'danger' : 'success'"
+                      size="small"
+                      @click="toggleTalkRight(scope.row)"
+                    >
+                      {{ scope.row.hasTalkRight ? '取消话权' : '授予话权' }}
+                    </el-button>
+                  </template>
+                </el-table-column>
+              </el-table>
+            </div>
+          </div>
+        </el-card>
+      </el-col>
+      
+      <!-- 右侧通话记录 -->
+      <el-col :span="6">
+        <el-card class="call-record-card">
+          <template #header>
+            <div class="card-header">
+              <span>通话记录</span>
+            </div>
+          </template>
+          
+          <el-timeline>
+            <el-timeline-item
+              v-for="record in callRecords"
+              :key="record.id"
+              :timestamp="formatTime(record.startTime)"
+              :type="record.status === 'completed' ? 'success' : record.status === 'failed' ? 'danger' : 'primary'"
+            >
+              <h4>{{ getCallTypeLabel(record.type) }}</h4>
+              <p>发起方: {{ getDeviceById(record.caller)?.name }}</p>
+              <p>接收方: {{ record.receivers.map(id => getDeviceById(id)?.name).join(', ') }}</p>
+              <p v-if="record.duration">通话时长: {{ formatDuration(record.duration) }}</p>
+              <p>状态: {{ record.status === 'ongoing' ? '进行中' : record.status === 'completed' ? '已完成' : '失败' }}</p>
+            </el-timeline-item>
+          </el-timeline>
+        </el-card>
+      </el-col>
+    </el-row>
+  </div>
+</template>
+
+<script setup lang="ts">
+import { ref, computed, onMounted, onUnmounted } from 'vue';
+import { 
+  Search, 
+  Phone, 
+  ChatDotRound, 
+  Connection, 
+  SetUp 
+} from '@element-plus/icons-vue';
+import type { DispatchDevice, DispatchGroup, CallRecord } from '@/types';
+
+// 设备列表数据
+const devices = ref<DispatchDevice[]>([
+  { id: '1', name: '对讲机-01', type: 'intercom', status: 'online' },
+  { id: '2', name: '对讲机-02', type: 'intercom', status: 'offline' },
+  { id: '3', name: '对讲机-03', type: 'intercom', status: 'online' },
+  { id: '4', name: '手持台-01', type: 'radio', status: 'online' },
+  { id: '5', name: '手持台-02', type: 'radio', status: 'busy' },
+  { id: '6', name: '手持台-03', type: 'radio', status: 'online' },
+  { id: '7', name: '电话-01', type: 'phone', status: 'online' },
+  { id: '8', name: '电话-02', type: 'phone', status: 'offline' }
+]);
+
+// 分组数据
+const groups = ref<DispatchGroup[]>([
+  { id: 'g1', name: '一线调度组', type: 'static', devices: ['1', '3', '4'] },
+  { id: 'g2', name: '二线调度组', type: 'static', devices: ['2', '5', '7'] },
+  { id: 'g3', name: '应急调度组', type: 'dynamic', devices: ['1', '4', '6', '7'] }
+]);
+
+// 通话记录数据
+const callRecords = ref<CallRecord[]>([
+  {
+    id: 'c1',
+    type: 'individual',
+    caller: '1',
+    receivers: ['4'],
+    startTime: new Date(Date.now() - 3600000),
+    endTime: new Date(Date.now() - 3550000),
+    duration: 600,
+    status: 'completed'
+  },
+  {
+    id: 'c2',
+    type: 'group',
+    caller: '3',
+    receivers: ['1', '4', '6'],
+    startTime: new Date(Date.now() - 1800000),
+    endTime: new Date(Date.now() - 1700000),
+    duration: 1200,
+    status: 'completed'
+  },
+  {
+    id: 'c3',
+    type: 'dynamic',
+    caller: '7',
+    receivers: ['1', '3', '5'],
+    startTime: new Date(Date.now() - 900000),
+    status: 'failed'
+  }
+]);
+
+// 界面状态
+const searchKeyword = ref('');
+const activeDeviceTab = ref('all');
+const activeGroups = ref<string[]>([]);
+const selectedDevices = ref<DispatchDevice[]>([]);
+const activeCall = ref<CallRecord | null>(null);
+const callStartTime = ref<number | null>(null);
+const callDuration = ref('00:00');
+const talkControlData = ref<{ id: string; name: string; hasTalkRight: boolean }[]>([]);
+
+// 定时器
+let durationTimer: number | null = null;
+
+// 计算属性：根据搜索关键词过滤设备
+const filteredDevices = computed(() => {
+  if (!searchKeyword.value) return devices.value;
+  
+  return devices.value.filter(device => 
+    device.name.toLowerCase().includes(searchKeyword.value.toLowerCase()) ||
+    getDeviceTypeLabel(device.type).toLowerCase().includes(searchKeyword.value.toLowerCase())
+  );
+});
+
+// 获取设备类型标签
+const getDeviceTypeLabel = (type: string) => {
+  switch (type) {
+    case 'intercom': return '对讲机';
+    case 'radio': return '手持台';
+    case 'phone': return '电话';
+    default: return '其他';
+  }
+};
+
+// 获取设备状态类型
+const getDeviceStatusType = (status?: string) => {
+  switch (status) {
+    case 'online': return 'success';
+    case 'busy': return 'warning';
+    case 'offline': return 'info';
+    default: return 'info';
+  }
+};
+
+// 获取通话类型标签
+const getCallTypeLabel = (type: string) => {
+  switch (type) {
+    case 'individual': return '单呼';
+    case 'group': return '组呼';
+    case 'dynamic': return '动态组呼';
+    case 'mixed': return '混合编组';
+    default: return '未知';
+  }
+};
+
+// 根据ID获取设备
+const getDeviceById = (id?: string) => {
+  if (!id) return null;
+  return devices.value.find(device => device.id === id);
+};
+
+// 格式化时间
+const formatTime = (date: Date) => {
+  return date.toLocaleTimeString();
+};
+
+// 格式化通话时长
+const formatDuration = (seconds: number) => {
+  const minutes = Math.floor(seconds / 60);
+  const remainingSeconds = seconds % 60;
+  return ${minutes.toString().padStart(2, '0')}:;
+};
+
+// 处理设备点击
+const handleDeviceClick = (device: DispatchDevice) => {
+  // 如果设备已经选中，则取消选中
+  const index = selectedDevices.value.findIndex(d => d.id === device.id);
+  if (index >= 0) {
+    selectedDevices.value.splice(index, 1);
+  } else {
+    // 否则添加到选中列表
+    selectedDevices.value.push(device);
+  }
+};
+
+// 移除选中设备
+const removeSelectedDevice = (device: DispatchDevice) => {
+  const index = selectedDevices.value.findIndex(d => d.id === device.id);
+  if (index >= 0) {
+    selectedDevices.value.splice(index, 1);
+  }
+};
+
+// 开始单呼
+const startIndividualCall = () => {
+  if (selectedDevices.value.length !== 1) return;
+  
+  const caller = devices.value[0]; // 假设第一个设备是发起方
+  const receiver = selectedDevices.value[0];
+  
+  startCall('individual', caller.id, [receiver.id]);
+};
+
+// 开始组呼
+const startGroupCall = () => {
+  if (selectedDevices.value.length < 2) return;
+  
+  const caller = devices.value[0]; // 假设第一个设备是发起方
+  const receivers = selectedDevices.value.map(device => device.id);
+  
+  startCall('group', caller.id, receivers);
+};
+
+// 开始动态组呼
+const startDynamicGroupCall = () => {
+  if (selectedDevices.value.length < 2) return;
+  
+  const caller = devices.value[0]; // 假设第一个设备是发起方
+  const receivers = selectedDevices.value.map(device => device.id);
+  
+  startCall('dynamic', caller.id, receivers);
+};
+
+// 开始混合编组
+const startMixedGroupCall = () => {
+  if (selectedDevices.value.length < 2) return;
+  
+  const caller = devices.value[0]; // 假设第一个设备是发起方
+  const receivers = selectedDevices.value.map(device => device.id);
+  
+  startCall('mixed', caller.id, receivers);
+};
+
+// 开始通话
+const startCall = (type: 'individual' | 'group' | 'dynamic' | 'mixed', callerId: string, receiverIds: string[]) => {
+  // 创建新的通话记录
+  const newCall: CallRecord = {
+    id: 'call-' + Date.now(),
+    type,
+    caller: callerId,
+    receivers: receiverIds,
+    startTime: new Date(),
+    status: 'ongoing'
+  };
+  
+  // 设置当前通话
+  activeCall.value = newCall;
+  callStartTime.value = Date.now();
+  
+  // 初始化话权控制数据
+  talkControlData.value = [
+    { id: callerId, name: getDeviceById(callerId)?.name || '', hasTalkRight: true },
+    ...receiverIds.map(id => ({
+      id,
+      name: getDeviceById(id)?.name || '',
+      hasTalkRight: false
+    }))
+  ];
+  
+  // 启动通话计时器
+  startCallTimer();
+  
+  // 更新设备状态为忙碌
+  updateDeviceStatus(callerId, 'busy');
+  receiverIds.forEach(id => updateDeviceStatus(id, 'busy'));
+  
+  // 添加到通话记录
+  callRecords.value.unshift(newCall);
+};
+
+// 结束通话
+const endCall = () => {
+  if (!activeCall.value || !callStartTime.value) return;
+  
+  // 计算通话时长
+  const duration = Math.floor((Date.now() - callStartTime.value) / 1000);
+  
+  // 更新通话记录
+  const callIndex = callRecords.value.findIndex(record => record.id === activeCall.value?.id);
+  if (callIndex >= 0) {
+    callRecords.value[callIndex].status = 'completed';
+    callRecords.value[callIndex].endTime = new Date();
+    callRecords.value[callIndex].duration = duration;
+  }
+  
+  // 恢复设备状态为在线
+  if (activeCall.value.caller) {
+    updateDeviceStatus(activeCall.value.caller, 'online');
+  }
+  activeCall.value.receivers.forEach(id => updateDeviceStatus(id, 'online'));
+  
+  // 清除当前通话
+  activeCall.value = null;
+  callStartTime.value = null;
+  
+  // 停止计时器
+  stopCallTimer();
+};
+
+// 切换话权
+const toggleTalkRight = (device: { id: string; name: string; hasTalkRight: boolean }) => {
+  device.hasTalkRight = !device.hasTalkRight;
+};
+
+// 更新设备状态
+const updateDeviceStatus = (deviceId: string, status: 'online' | 'offline' | 'busy') => {
+  const deviceIndex = devices.value.findIndex(device => device.id === deviceId);
+  if (deviceIndex >= 0) {
+    devices.value[deviceIndex].status = status;
+  }
+};
+
+// 启动通话计时器
+const startCallTimer = () => {
+  if (durationTimer !== null) {
+    stopCallTimer();
+  }
+  
+  durationTimer = window.setInterval(() => {
+    if (!callStartTime.value) return;
+    
+    const elapsedSeconds = Math.floor((Date.now() - callStartTime.value) / 1000);
+    callDuration.value = formatDuration(elapsedSeconds);
+  }, 1000);
+};
+
+// 停止通话计时器
+const stopCallTimer = () => {
+  if (durationTimer !== null) {
+    clearInterval(durationTimer);
+    durationTimer = null;
+  }
+};
+
+// 组件挂载时
+onMounted(() => {
+  // 可以在这里加载数据或执行其他初始化操作
+});
+
+// 组件卸载时
+onUnmounted(() => {
+  stopCallTimer();
+});
+</script>
+
+<style scoped>
+.audio-dispatch-container {
+  padding: 20px;
+}
+
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.device-list-card,
+.call-control-card,
+.call-record-card {
+  height: 100%;
+}
+
+.device-item {
+  display: flex;
+  align-items: center;
+  padding: 5px 0;
+}
+
+.device-name {
+  margin-left: 8px;
+  flex: 1;
+}
+
+.device-type {
+  color: #909399;
+  font-size: 12px;
+}
+
+.group-device-item {
+  padding: 5px 0;
+}
+
+.selected-devices {
+  margin-bottom: 20px;
+}
+
+.selected-devices .el-tag {
+  margin-right: 8px;
+  margin-bottom: 8px;
+}
+
+.call-actions {
+  margin-bottom: 20px;
+}
+
+.call-status {
+  margin-bottom: 20px;
+}
+
+.call-info {
+  margin-top: 10px;
+}
+
+.call-info p {
+  margin: 5px 0;
+}
+
+.talk-control {
+  margin-top: 20px;
+}
+</style>
+
+

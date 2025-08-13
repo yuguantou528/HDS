@@ -1,0 +1,630 @@
+/* 大屏显示专用色彩方案 */
+
+:root {
+  /* 大屏主色调 - 现代蓝色系 */
+  --large-screen-primary: #2563eb;
+  --large-screen-primary-light: #3b82f6;
+  --large-screen-primary-dark: #1d4ed8;
+  --large-screen-primary-hover: #60a5fa;
+  --large-screen-primary-active: #1e40af;
+  
+  /* 大屏辅助色彩 */
+  --large-screen-success: #10b981;
+  --large-screen-success-light: #34d399;
+  --large-screen-success-dark: #059669;
+
+  --large-screen-warning: #f59e0b;
+  --large-screen-warning-light: #fbbf24;
+  --large-screen-warning-dark: #d97706;
+
+  --large-screen-error: #ef4444;
+  --large-screen-error-light: #f87171;
+  --large-screen-error-dark: #dc2626;
+  
+  --large-screen-info: #2563eb;
+  --large-screen-info-light: #3b82f6;
+  --large-screen-info-dark: #1d4ed8;
+  
+  /* 大屏文字色彩 - 增强对比度 */
+  --large-screen-text-primary: #1f1f1f;
+  --large-screen-text-secondary: #4a4a4a;
+  --large-screen-text-tertiary: #6a6a6a;
+  --large-screen-text-disabled: #a6a6a6;
+  --large-screen-text-white: #ffffff;
+  --large-screen-text-light: #f0f0f0;
+  
+  /* 大屏背景色彩 */
+  --large-screen-bg-primary: #ffffff;
+  --large-screen-bg-secondary: #f8fafc;
+  --large-screen-bg-tertiary: #f1f5f9;
+  --large-screen-bg-quaternary: #e2e8f0;
+  --large-screen-bg-dark: #1e293b;
+  --large-screen-bg-darker: #0f172a;
+  
+  /* 大屏边框色彩 */
+  --large-screen-border-light: #e2e8f0;
+  --large-screen-border-medium: #cbd5e1;
+  --large-screen-border-dark: #94a3b8;
+  --large-screen-border-primary: #1890ff;
+  
+  /* 大屏状态指示器色彩 */
+  --large-screen-status-online: #52c41a;
+  --large-screen-status-offline: #8c8c8c;
+  --large-screen-status-busy: #faad14;
+  --large-screen-status-error: #ff4d4f;
+  --large-screen-status-connecting: #1890ff;
+  
+  /* 大屏卡片阴影 */
+  --large-screen-shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.05);
+  --large-screen-shadow-md: 0 2px 8px rgba(0, 0, 0, 0.06);
+  --large-screen-shadow-lg: 0 4px 16px rgba(0, 0, 0, 0.08);
+  --large-screen-shadow-xl: 0 8px 24px rgba(0, 0, 0, 0.10);
+  
+  /* 大屏渐变色彩 */
+  --large-screen-gradient-primary: linear-gradient(135deg, #2563eb 0%, #60a5fa 100%);
+  --large-screen-gradient-success: linear-gradient(135deg, #10b981 0%, #34d399 100%);
+  --large-screen-gradient-warning: linear-gradient(135deg, #f59e0b 0%, #fbbf24 100%);
+  --large-screen-gradient-error: linear-gradient(135deg, #ef4444 0%, #f87171 100%);
+  --large-screen-gradient-card: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+}
+
+/* 大屏卡片色彩样式 */
+.large-screen-card {
+  background: var(--large-screen-bg-primary) !important;
+  border: 1px solid var(--large-screen-border-light) !important;
+  box-shadow: var(--large-screen-shadow-md) !important;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+.large-screen-card:hover {
+  border-color: var(--large-screen-border-primary) !important;
+  box-shadow: var(--large-screen-shadow-lg) !important;
+}
+
+.large-screen-card .el-card__header {
+  background: var(--large-screen-bg-secondary) !important;
+  border-bottom: 2px solid var(--large-screen-border-light) !important;
+  color: var(--large-screen-text-primary) !important;
+}
+
+/* 大屏按钮色彩样式 */
+.large-screen-button.el-button--primary {
+  background: var(--large-screen-gradient-primary) !important;
+  border-color: var(--large-screen-primary) !important;
+  color: var(--large-screen-text-white) !important;
+}
+
+.large-screen-button.el-button--primary:hover {
+  background: var(--large-screen-primary-hover) !important;
+  border-color: var(--large-screen-primary-hover) !important;
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.25) !important;
+}
+
+.large-screen-button.el-button--success {
+  background: var(--large-screen-gradient-success) !important;
+  border-color: var(--large-screen-success) !important;
+  color: var(--large-screen-text-white) !important;
+}
+
+.large-screen-button.el-button--success:hover {
+  background: var(--large-screen-success-light) !important;
+  border-color: var(--large-screen-success-light) !important;
+  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.25) !important;
+}
+
+.large-screen-button.el-button--warning {
+  background: var(--large-screen-gradient-warning) !important;
+  border-color: var(--large-screen-warning) !important;
+  color: var(--large-screen-text-white) !important;
+}
+
+.large-screen-button.el-button--warning:hover {
+  background: var(--large-screen-warning-light) !important;
+  border-color: var(--large-screen-warning-light) !important;
+  box-shadow: 0 4px 12px rgba(250, 173, 20, 0.3) !important;
+}
+
+/* 大屏按钮禁用状态样式 */
+.large-screen-button.is-disabled,
+.large-screen-button:disabled,
+.large-screen-button[disabled] {
+  background: var(--large-screen-bg-quaternary) !important;
+  border-color: var(--large-screen-border-light) !important;
+  color: var(--large-screen-text-disabled) !important;
+  cursor: not-allowed !important;
+  opacity: 0.6 !important;
+  pointer-events: none !important;
+}
+
+.large-screen-button.is-disabled:hover,
+.large-screen-button:disabled:hover,
+.large-screen-button[disabled]:hover {
+  background: var(--large-screen-bg-quaternary) !important;
+  border-color: var(--large-screen-border-light) !important;
+  color: var(--large-screen-text-disabled) !important;
+  transform: none !important;
+  box-shadow: none !important;
+}
+
+/* 针对不同类型按钮的禁用状态 */
+.large-screen-button.el-button--primary.is-disabled,
+.large-screen-button.el-button--primary:disabled,
+.large-screen-button.el-button--primary[disabled],
+.large-screen-button.el-button--warning.is-disabled,
+.large-screen-button.el-button--warning:disabled,
+.large-screen-button.el-button--warning[disabled],
+.large-screen-button.el-button--danger.is-disabled,
+.large-screen-button.el-button--danger:disabled,
+.large-screen-button.el-button--danger[disabled],
+.large-screen-button.el-button--success.is-disabled,
+.large-screen-button.el-button--success:disabled,
+.large-screen-button.el-button--success[disabled] {
+  background: var(--large-screen-bg-quaternary) !important;
+  border-color: var(--large-screen-border-light) !important;
+  color: var(--large-screen-text-disabled) !important;
+  cursor: not-allowed !important;
+  opacity: 0.6 !important;
+  pointer-events: none !important;
+}
+
+.large-screen-button.el-button--primary.is-disabled:hover,
+.large-screen-button.el-button--primary:disabled:hover,
+.large-screen-button.el-button--primary[disabled]:hover,
+.large-screen-button.el-button--warning.is-disabled:hover,
+.large-screen-button.el-button--warning:disabled:hover,
+.large-screen-button.el-button--warning[disabled]:hover,
+.large-screen-button.el-button--danger.is-disabled:hover,
+.large-screen-button.el-button--danger:disabled:hover,
+.large-screen-button.el-button--danger[disabled]:hover,
+.large-screen-button.el-button--success.is-disabled:hover,
+.large-screen-button.el-button--success:disabled:hover,
+.large-screen-button.el-button--success[disabled]:hover {
+  background: var(--large-screen-bg-quaternary) !important;
+  border-color: var(--large-screen-border-light) !important;
+  color: var(--large-screen-text-disabled) !important;
+  transform: none !important;
+  box-shadow: none !important;
+}
+
+.large-screen-button.el-button--danger {
+  background: var(--large-screen-gradient-error) !important;
+  border-color: var(--large-screen-error) !important;
+  color: var(--large-screen-text-white) !important;
+}
+
+.large-screen-button.el-button--danger:hover {
+  background: var(--large-screen-error-light) !important;
+  border-color: var(--large-screen-error-light) !important;
+  box-shadow: 0 4px 12px rgba(255, 77, 79, 0.3) !important;
+}
+
+.large-screen-button.el-button--default {
+  background: var(--large-screen-bg-primary) !important;
+  border-color: var(--large-screen-border-medium) !important;
+  color: var(--large-screen-text-primary) !important;
+}
+
+.large-screen-button.el-button--default:hover {
+  background: var(--large-screen-bg-secondary) !important;
+  border-color: var(--large-screen-primary) !important;
+  color: var(--large-screen-primary) !important;
+}
+
+/* 大屏表格色彩样式 */
+.large-screen-table .el-table__header {
+  background: var(--large-screen-bg-secondary) !important;
+}
+
+.large-screen-table .el-table th {
+  background: var(--large-screen-bg-secondary) !important;
+  color: var(--large-screen-text-primary) !important;
+  border-bottom: 2px solid var(--large-screen-border-medium) !important;
+}
+
+.large-screen-table .el-table td {
+  color: var(--large-screen-text-secondary) !important;
+  border-bottom: 1px solid var(--large-screen-border-light) !important;
+}
+
+.large-screen-table .el-table__row:hover {
+  background: var(--large-screen-bg-tertiary) !important;
+}
+
+.large-screen-table .el-table__row.current-row {
+  background: rgba(24, 144, 255, 0.05) !important;
+}
+
+/* 大屏状态指示器色彩 */
+.large-screen-status-dot.online {
+  background: var(--large-screen-status-online) !important;
+  box-shadow: 0 0 0 2px rgba(82, 196, 26, 0.2) !important;
+}
+
+.large-screen-status-dot.offline {
+  background: var(--large-screen-status-offline) !important;
+  box-shadow: 0 0 0 2px rgba(140, 140, 140, 0.2) !important;
+}
+
+.large-screen-status-dot.busy {
+  background: var(--large-screen-status-busy) !important;
+  box-shadow: 0 0 0 2px rgba(250, 173, 20, 0.2) !important;
+}
+
+.large-screen-status-dot.error {
+  background: var(--large-screen-status-error) !important;
+  box-shadow: 0 0 0 2px rgba(255, 77, 79, 0.2) !important;
+}
+
+.large-screen-status-dot.connecting {
+  background: var(--large-screen-status-connecting) !important;
+  box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.2) !important;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0% { opacity: 1; }
+  50% { opacity: 0.5; }
+  100% { opacity: 1; }
+}
+
+/* 大屏文字色彩类 */
+.large-screen-text-primary {
+  color: var(--large-screen-text-primary) !important;
+}
+
+.large-screen-text-secondary {
+  color: var(--large-screen-text-secondary) !important;
+}
+
+.large-screen-text-tertiary {
+  color: var(--large-screen-text-tertiary) !important;
+}
+
+.large-screen-text-success {
+  color: var(--large-screen-success) !important;
+}
+
+.large-screen-text-warning {
+  color: var(--large-screen-warning) !important;
+}
+
+.large-screen-text-error {
+  color: var(--large-screen-error) !important;
+}
+
+.large-screen-text-info {
+  color: var(--large-screen-info) !important;
+}
+
+/* 大屏标签色彩样式 */
+.large-screen-tag.el-tag--success {
+  background: rgba(82, 196, 26, 0.1) !important;
+  border-color: var(--large-screen-success-light) !important;
+  color: var(--large-screen-success-dark) !important;
+}
+
+.large-screen-tag.el-tag--warning {
+  background: rgba(250, 173, 20, 0.1) !important;
+  border-color: var(--large-screen-warning-light) !important;
+  color: var(--large-screen-warning-dark) !important;
+}
+
+.large-screen-tag.el-tag--danger {
+  background: rgba(255, 77, 79, 0.1) !important;
+  border-color: var(--large-screen-error-light) !important;
+  color: var(--large-screen-error-dark) !important;
+}
+
+.large-screen-tag.el-tag--info {
+  background: rgba(24, 144, 255, 0.1) !important;
+  border-color: var(--large-screen-info-light) !important;
+  color: var(--large-screen-info-dark) !important;
+}
+
+/* 视频模块专用样式 */
+.large-screen-container {
+  background: var(--large-screen-bg-secondary) !important;
+  padding: var(--large-screen-padding, 32px) !important;
+}
+
+/* 设备名称文字样式 */
+.device-name-text {
+  font-size: 14px !important;
+  font-weight: 500 !important;
+  color: var(--large-screen-text-secondary) !important;
+}
+
+/* 图标尺寸优化 */
+.large-screen-icon {
+  font-size: 16px !important;
+}
+
+.large-screen-icon-sm {
+  font-size: 14px !important;
+}
+
+.large-screen-icon-lg {
+  font-size: 20px !important;
+}
+
+/* 表格操作按钮样式 */
+.table-action-btn {
+  width: 28px !important;
+  height: 28px !important;
+  border-radius: 50% !important;
+  margin: 0 3px !important;
+}
+
+/* 成员操作按钮样式 */
+.member-action-btn {
+  height: 36px !important;
+  padding: 0 12px !important;
+  font-size: 14px !important;
+  margin: 0 2px !important;
+}
+
+/* 成员操作按钮禁用状态 */
+.member-action-btn.is-disabled,
+.member-action-btn:disabled,
+.member-action-btn[disabled] {
+  background: var(--large-screen-bg-quaternary) !important;
+  border-color: var(--large-screen-border-light) !important;
+  color: var(--large-screen-text-disabled) !important;
+  cursor: not-allowed !important;
+  opacity: 0.6 !important;
+  pointer-events: none !important;
+}
+
+.member-action-btn.is-disabled:hover,
+.member-action-btn:disabled:hover,
+.member-action-btn[disabled]:hover {
+  background: var(--large-screen-bg-quaternary) !important;
+  border-color: var(--large-screen-border-light) !important;
+  color: var(--large-screen-text-disabled) !important;
+  transform: none !important;
+  box-shadow: none !important;
+}
+
+/* 大屏表单项样式 */
+.large-screen-form-item .el-form-item__label {
+  font-size: 16px !important;
+  font-weight: 500 !important;
+  color: var(--large-screen-text-primary) !important;
+  line-height: 48px !important;
+}
+
+.large-screen-form-item .el-form-item__content {
+  line-height: 48px !important;
+}
+
+/* 大屏选择器样式 */
+.large-screen-select .el-select__wrapper {
+  height: 48px !important;
+  font-size: 16px !important;
+  border: 2px solid var(--large-screen-border-medium) !important;
+  border-radius: 24px !important;
+}
+
+.large-screen-select .el-select__wrapper:hover {
+  border-color: var(--large-screen-primary) !important;
+}
+
+.large-screen-select .el-select__wrapper.is-focused {
+  border-color: var(--large-screen-primary) !important;
+  box-shadow: 0 0 0 3px rgba(24, 144, 255, 0.1) !important;
+}
+
+/* 大屏日期选择器样式 */
+.large-screen-date-picker .el-input__wrapper {
+  height: 48px !important;
+  font-size: 16px !important;
+  border: 2px solid var(--large-screen-border-medium) !important;
+  border-radius: 24px !important;
+}
+
+.large-screen-date-picker .el-input__wrapper:hover {
+  border-color: var(--large-screen-primary) !important;
+}
+
+.large-screen-date-picker .el-input__wrapper.is-focus {
+  border-color: var(--large-screen-primary) !important;
+  box-shadow: 0 0 0 3px rgba(24, 144, 255, 0.1) !important;
+}
+
+/* 大屏单选按钮组样式 */
+.large-screen-radio-group .el-radio-button__inner {
+  height: 40px !important;
+  line-height: 36px !important;
+  font-size: 16px !important;
+  font-weight: 500 !important;
+  padding: 0 20px !important;
+  border: 2px solid var(--large-screen-border-medium) !important;
+  color: var(--large-screen-text-secondary) !important;
+  background: var(--large-screen-bg-primary) !important;
+}
+
+.large-screen-radio-group .el-radio-button__inner:hover {
+  color: var(--large-screen-primary) !important;
+  border-color: var(--large-screen-primary) !important;
+}
+
+.large-screen-radio-group .el-radio-button.is-active .el-radio-button__inner {
+  background: var(--large-screen-gradient-primary) !important;
+  border-color: var(--large-screen-primary) !important;
+  color: var(--large-screen-text-white) !important;
+  box-shadow: 0 2px 8px rgba(24, 144, 255, 0.3) !important;
+}
+
+/* 大屏标签样式增强 */
+.large-screen-tag {
+  font-size: 14px !important;
+  padding: 4px 12px !important;
+  border-radius: 12px !important;
+  font-weight: 500 !important;
+}
+
+/* 主持人徽章样式 */
+.host-badge.large-screen-tag {
+  background: var(--large-screen-gradient-warning) !important;
+  border: none !important;
+  color: var(--large-screen-text-white) !important;
+  font-weight: 600 !important;
+}
+
+/* 大屏响应式设计 */
+@media (min-width: 1920px) {
+  .large-screen-container {
+    padding: 40px !important;
+  }
+
+  .large-screen-card {
+    border-radius: 20px !important;
+  }
+
+  .large-screen-button {
+    height: 32px !important;
+    font-size: 13px !important;
+    padding: 0 16px !important;
+  }
+
+  .large-screen-title {
+    font-size: 24px !important;
+  }
+
+  .large-screen-text-primary {
+    font-size: 16px !important;
+  }
+
+  .large-screen-text-secondary {
+    font-size: 14px !important;
+  }
+
+  .large-screen-avatar {
+    width: 20px !important;
+    height: 20px !important;
+    font-size: 12px !important;
+  }
+
+  .table-action-btn {
+    width: 32px !important;
+    height: 32px !important;
+  }
+
+  .member-action-btn {
+    height: 32px !important;
+    font-size: 13px !important;
+    padding: 0 14px !important;
+  }
+
+  /* 1920px屏幕图标尺寸 */
+  .large-screen-button .el-icon,
+  .table-action-btn .el-icon,
+  .member-action-btn .el-icon {
+    font-size: 13px !important;
+  }
+}
+
+@media (min-width: 2560px) {
+  .large-screen-container {
+    padding: 48px !important;
+  }
+
+  .large-screen-card {
+    border-radius: 24px !important;
+  }
+
+  .large-screen-button {
+    height: 36px !important;
+    font-size: 14px !important;
+    padding: 0 20px !important;
+  }
+
+  .large-screen-title {
+    font-size: 28px !important;
+  }
+
+  .large-screen-text-primary {
+    font-size: 18px !important;
+  }
+
+  .large-screen-text-secondary {
+    font-size: 16px !important;
+  }
+
+  .large-screen-avatar {
+    width: 22px !important;
+    height: 22px !important;
+    font-size: 12px !important;
+  }
+
+  .table-action-btn {
+    width: 36px !important;
+    height: 36px !important;
+  }
+
+  .member-action-btn {
+    height: 36px !important;
+    font-size: 14px !important;
+    padding: 0 18px !important;
+  }
+
+  /* 2560px屏幕图标尺寸 */
+  .large-screen-button .el-icon,
+  .table-action-btn .el-icon,
+  .member-action-btn .el-icon {
+    font-size: 14px !important;
+  }
+}
+
+/* 统一的交互反馈效果 */
+.large-screen-card:hover,
+.meeting-card.large-screen-card:hover,
+.device-item:hover {
+  transform: translateY(-2px) !important;
+  box-shadow: var(--large-screen-shadow-xl) !important;
+  border-color: var(--large-screen-primary) !important;
+}
+
+.large-screen-button:hover {
+  transform: translateY(-1px) !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.10) !important;
+}
+
+.large-screen-button:active {
+  transform: translateY(0) !important;
+}
+
+/* Element Plus 图标尺寸优化 */
+.large-screen-button .el-icon,
+.table-action-btn .el-icon,
+.member-action-btn .el-icon {
+  font-size: 14px !important;
+}
+
+.large-screen-card .el-icon {
+  font-size: 16px !important;
+}
+
+/* 状态指示器优化 */
+.status-indicator {
+  width: 8px !important;
+  height: 8px !important;
+  border-radius: 50% !important;
+  display: inline-block !important;
+}
+
+/* 统一的动画效果 */
+.large-screen-card,
+.large-screen-button,
+.meeting-card,
+.device-item {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+/* 统一的焦点样式 */
+.large-screen-button:focus,
+.large-screen-select:focus,
+.large-screen-input:focus {
+  outline: none !important;
+  box-shadow: 0 0 0 3px rgba(24, 144, 255, 0.2) !important;
+}

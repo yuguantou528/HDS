@@ -1,0 +1,160 @@
+/* 全局CSS变量 */
+:root {
+  --header-height: 60px;
+  --sidebar-width: 200px;
+  --content-padding: 20px;
+  --gap-sm: 8px;
+  --gap-md: 16px;
+  --gap-lg: 24px;
+  --primary-color: #409EFF;
+  --text-color: #303133;
+  --text-color-light: #909399;
+  --border-color: #EBEEF5;
+  --bg-color: #FFFFFF;
+}
+
+/* 基础样式重置 */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body {
+  height: 100%;
+  font-family: 'Helvetica Neue', Helvetica, 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  color: var(--text-color);
+  /* 防止页面滚动 */
+  overflow: hidden;
+  /* 优化动画性能 */
+  transform: translateZ(0);
+  backface-visibility: hidden;
+}
+
+#app {
+  height: 100%;
+  /* 防止应用容器滚动 */
+  overflow: hidden;
+  /* 启用硬件加速 */
+  transform: translateZ(0);
+  backface-visibility: hidden;
+}
+
+.app-container {
+  position: relative;
+  width: 100%;
+  height: 100vh; /* 使用视口高度确保固定布局 */
+  /* 防止容器滚动 */
+  overflow: hidden;
+  /* 优化动画性能 */
+  transform: translateZ(0);
+  backface-visibility: hidden;
+}
+
+.main-content {
+  position: fixed; /* 改为fixed确保不受滚动影响 */
+  top: var(--header-height);
+  left: var(--sidebar-width);
+  width: calc(100vw - var(--sidebar-width)); /* 使用视口宽度 */
+  height: calc(100vh - var(--header-height)); /* 使用视口高度 */
+  padding: var(--content-padding);
+  overflow: hidden; /* 禁用主内容区滚动条，让子组件自己处理滚动 */
+  transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1), width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  will-change: left, width;
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  /* 优化滚动性能 */
+  -webkit-overflow-scrolling: touch;
+  /* 确保在固定定位层级中正确显示 */
+  z-index: 10;
+}
+
+/* 布局样式 */
+.app-header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw; /* 使用视口宽度确保完全覆盖 */
+  height: var(--header-height);
+  background-color: var(--bg-color);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+  z-index: 1000; /* 提高z-index确保在最顶层 */
+  /* 优化动画性能 */
+  transform: translateZ(0);
+  backface-visibility: hidden;
+}
+
+.app-sidebar {
+  position: fixed;
+  top: var(--header-height);
+  left: 0;
+  width: var(--sidebar-width);
+  height: calc(100vh - var(--header-height));
+  background-color: var(--bg-color);
+  border-right: 1px solid var(--border-color);
+  z-index: 900; /* 提高z-index确保在主内容之上 */
+  overflow-y: auto;
+  /* 优化滚动性能 */
+  -webkit-overflow-scrolling: touch;
+  /* 确保固定定位正确 */
+  transform: translateZ(0);
+  backface-visibility: hidden;
+}
+
+/* 防止多重滚动条的通用样式 */
+.main-content > * {
+  max-height: 100%;
+  overflow: hidden;
+}
+
+/* 确保页面容器正确处理高度 */
+.main-content .el-row {
+  height: 100%;
+  min-height: 0;
+}
+
+.main-content .el-col {
+  height: 100%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  :root {
+    --sidebar-width: 0px; /* 在移动设备上隐藏侧边栏 */
+    --content-padding: 16px;
+  }
+
+  .app-sidebar {
+    transform: translateX(-100%); /* 隐藏侧边栏 */
+    transition: transform 0.3s ease;
+  }
+
+  .main-content {
+    left: 0;
+    width: 100vw;
+  }
+}
+
+@media (max-width: 480px) {
+  :root {
+    --header-height: 50px; /* 在小屏幕上减少header高度 */
+    --content-padding: 12px;
+  }
+}
+
+/* 确保固定定位在所有浏览器中正常工作 */
+.app-header,
+.app-sidebar,
+.main-content {
+  /* 防止在某些浏览器中出现滚动问题 */
+  -webkit-transform: translateZ(0);
+  -moz-transform: translateZ(0);
+  -ms-transform: translateZ(0);
+  -o-transform: translateZ(0);
+  transform: translateZ(0);
+}
