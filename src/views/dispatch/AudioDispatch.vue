@@ -35,7 +35,7 @@
               </div>
             </div>
           </template>
-          
+
           <el-tabs v-model="activeDeviceTab">
             <el-tab-pane label="全部设备" name="all">
               <el-tree
@@ -56,10 +56,11 @@
                     <span class="device-type">{{ getDeviceTypeLabel(data.type) }}</span>
                     <span v-if="isDeviceSelected(data.id)" class="selected-indicator"><el-icon><Check /></el-icon>已选</span>
                     <div class="device-actions">
-                      <el-button 
-                        v-if="data.status === 'online'" 
-                        size="mini" 
-                        type="danger" 
+                      <el-button
+                        v-if="data.status === 'online'"
+                        size="mini"
+                        type="danger"
+                        class="device-emergency-btn"
                         @click.stop="emergencyCall(data)"
                         title="紧急呼叫"
                       >
@@ -72,7 +73,7 @@
             </el-tab-pane>
             <el-tab-pane label="分组" name="groups">
               <div class="group-controls">
-                <el-button size="small" @click="createPresetGroup">
+                <el-button size="small" class="create-group-btn" @click="createPresetGroup">
                   <el-icon><Plus /></el-icon> 新建预设组
                 </el-button>
               </div>
@@ -83,17 +84,17 @@
                       <span>{{ group.name }}</span>
                       <div class="group-ops">
                         <el-tooltip content="选择组" placement="top">
-                          <el-button circle size="small" :type="selectedGroups[group.id] ? 'primary' : 'default'" @click.stop="selectedGroups[group.id] = !selectedGroups[group.id]; handleGroupSelect(group)">
+                          <el-button circle size="small" :type="selectedGroups[group.id] ? 'primary' : 'default'" class="group-select-btn" @click.stop="selectedGroups[group.id] = !selectedGroups[group.id]; handleGroupSelect(group)">
                             <el-icon><Check /></el-icon>
                           </el-button>
                         </el-tooltip>
                         <el-tooltip content="编辑" placement="top">
-                          <el-button circle size="small" @click.stop="editGroup(group)">
+                          <el-button circle size="small" class="group-edit-btn" @click.stop="editGroup(group)">
                             <el-icon><Edit /></el-icon>
                           </el-button>
                         </el-tooltip>
                         <el-tooltip content="删除" placement="top">
-                          <el-button circle size="small" type="danger" @click.stop="deleteGroup(group)">
+                          <el-button circle size="small" type="danger" class="group-delete-btn" @click.stop="deleteGroup(group)">
                             <el-icon><Delete /></el-icon>
                           </el-button>
                         </el-tooltip>
@@ -173,7 +174,7 @@
           </el-tabs>
         </el-card>
       </el-col>
-      
+
       <!-- 中间通话控制区 -->
       <el-col :span="12">
         <el-card class="call-control-card">
@@ -187,7 +188,7 @@
               </div>
             </div>
           </template>
-          
+
           <div class="call-control-content">
             <div class="selected-devices">
               <h3>已选设备 ({{ selectedDevices.length }})</h3>
@@ -197,17 +198,21 @@
                 :key="device.id"
                 :closable="canRemoveDeviceInCall"
                 @close="removeSelectedDevice(device)"
-                :type="isEmergencyTarget(device) ? 'danger' : ''"
-                class="selected-device-tag"
+                :type="isEmergencyTarget(device) ? 'danger' : (isDeviceSpeaking(device.id) ? 'warning' : '')"
+                :class="['selected-device-tag', { 'speaking-device': isDeviceSpeaking(device.id) }]"
               >
+                <el-icon v-if="isDeviceSpeaking(device.id)" class="speaking-icon">
+                  <Microphone />
+                </el-icon>
                 {{ device.name }}
                 <span v-if="isEmergencyTarget(device)" class="emergency-badge">紧急</span>
+                <span v-if="isDeviceSpeaking(device.id)" class="speaking-badge">说话中</span>
               </el-tag>
             </div>
-            
+
             <div class="call-actions">
               <el-button-group>
-                <el-button type="primary" :disabled="selectedDevices.length !== 1 && !hasSelectedGroups" @click="startIndividualCall">
+                <el-button type="primary" :disabled="selectedDevices.length !== 1 || hasSelectedGroups" @click="startIndividualCall">
                   <el-icon><Phone /></el-icon> 单呼
                 </el-button>
                 <el-button type="success" :disabled="!hasSelectedGroups" @click="startGroupCall">
@@ -218,7 +223,7 @@
                 </el-button>
               </el-button-group>
             </div>
-            
+
             <div class="call-status" v-if="activeCall">
               <el-alert
                 :title="'通话中: ' + getCallTypeLabel(activeCall.type)"
@@ -227,7 +232,7 @@
                 show-icon
               >
                 <div class="call-info">
-                  <p>发起方: {{ getDeviceById(activeCall.caller)?.name }}</p>
+                  <p>发起方: {{ getCallerDisplayName(activeCall) }}</p>
                   <p>接收方: {{ activeCall.receivers.map(id => getDeviceById(id)?.name).join(', ') }}</p>
                   <p>通话时长: {{ callDuration }}</p>
                   <p v-if="isRecording" class="recording-status">● 录音中...</p>
@@ -239,9 +244,9 @@
                 </el-button>
               </div>
             </div>
-            
-            <div class="volume-control" v-if="activeCall">
-              <h3>音量控制</h3>
+
+            <div class="dispatcher-volume-control" v-if="activeCall">
+              <h3>调度台音量控制</h3>
               <div class="volume-sliders">
                 <div class="volume-item">
                   <span>主音量</span>
@@ -249,30 +254,66 @@
                 </div>
                 <div class="volume-item">
                   <span>麦克风音量</span>
-                  <el-slider v-model="micVolume" :min="0" :max="100" />
+                  <el-slider
+                    v-model="micVolume"
+                    :min="0"
+                    :max="100"
+                    :disabled="isDispatcherMuted"
+                    :class="{ 'muted-slider': isDispatcherMuted }"
+                  />
+                  <span v-if="isDispatcherMuted" class="muted-indicator">🔇</span>
                 </div>
               </div>
+              <div class="dispatcher-mute-control">
+                <el-button
+                  :type="isDispatcherMuted ? 'warning' : 'info'"
+                  :icon="isDispatcherMuted ? 'VideoPlay' : 'VideoPause'"
+                  @click="toggleDispatcherMute"
+                >
+                  {{ isDispatcherMuted ? '取消静音' : '静音麦克风' }}
+                </el-button>
+              </div>
             </div>
-            
+
             <div class="talk-control" v-if="activeCall">
               <h3>话权控制</h3>
               <el-table :data="talkControlData" style="width: 100%">
-                <el-table-column prop="name" label="设备名称" />
+                <el-table-column prop="name" label="设备名称">
+                  <template #default="scope">
+                    <div class="device-name-cell">
+                      <el-icon v-if="scope.row.isSpeaking" class="speaking-icon-table">
+                        <Microphone />
+                      </el-icon>
+                      <span :class="{ 'speaking-text': scope.row.isSpeaking }">{{ scope.row.name }}</span>
+                    </div>
+                  </template>
+                </el-table-column>
                 <el-table-column prop="status" label="状态">
                   <template #default="scope">
-                    <el-tag :type="scope.row.hasTalkRight ? 'success' : 'info'">
-                      {{ scope.row.hasTalkRight ? '有话权' : '无话权' }}
-                    </el-tag>
+                    <div class="status-cell">
+                      <el-tag :type="scope.row.hasTalkRight ? 'success' : 'info'">
+                        {{ scope.row.hasTalkRight ? '有话权' : '无话权' }}
+                      </el-tag>
+                      <el-tag v-if="scope.row.isSpeaking" type="warning" class="speaking-tag">
+                        说话中
+                      </el-tag>
+                    </div>
                   </template>
                 </el-table-column>
                 <el-table-column label="音量">
                   <template #default="scope">
-                    <el-slider 
-                      v-model="scope.row.volume" 
-                      :min="0" 
-                      :max="100" 
-                      style="width: 100px;"
-                    />
+                    <div class="volume-control-cell">
+                      <el-slider
+                        v-model="scope.row.volume"
+                        :min="0"
+                        :max="100"
+                        :disabled="scope.row.isMuted"
+                        :class="{ 'muted-slider': scope.row.isMuted }"
+                        style="width: 100px;"
+                        @change="onVolumeChange(scope.row)"
+                      />
+                      <span v-if="scope.row.isMuted" class="muted-indicator">🔇</span>
+                    </div>
                   </template>
                 </el-table-column>
                 <el-table-column label="操作">
@@ -286,6 +327,8 @@
                     </el-button>
                     <el-button
                       size="small"
+                      :type="scope.row.isMuted ? 'warning' : 'info'"
+                      :icon="scope.row.isMuted ? 'VideoPlay' : 'VideoPause'"
                       @click="muteDevice(scope.row)"
                     >
                       {{ scope.row.isMuted ? '取消静音' : '静音' }}
@@ -297,7 +340,7 @@
           </div>
         </el-card>
       </el-col>
-      
+
       <!-- 右侧通话记录 -->
       <el-col :span="6">
         <el-card class="call-record-card">
@@ -309,27 +352,40 @@
               </el-button>
             </div>
           </template>
-          
+
           <el-tabs v-model="activeRecordTab">
             <el-tab-pane label="通话记录" name="calls">
-              <el-timeline>
-                <el-timeline-item
-                  v-for="record in callRecords"
-                  :key="record.id"
-                  :timestamp="formatTime(record.startTime)"
-                  :type="record.status === 'completed' ? 'success' : record.status === 'failed' ? 'danger' : 'primary'"
-                >
-                  <h4>{{ getCallTypeLabel(record.type) }}</h4>
-                  <p>发起方: {{ getDeviceById(record.caller)?.name || '未知设备' }}</p>
-                  <p>接收方: {{ record.receivers.map(id => getDeviceById(id)?.name || '未知设备').join(', ') }}</p>
-                  <p v-if="record.duration">通话时长: {{ formatDuration(record.duration) }}</p>
-                  <p>状态: {{ getCallStatusLabel(record.status) }}</p>
-                  <div v-if="record.hasRecording" class="recording-info">
-                    <el-button size="mini" @click="playRecording(record)">播放录音</el-button>
-                    <el-button size="mini" @click="downloadRecording(record)">下载</el-button>
+              <div class="call-records-container">
+                <div class="call-records-timeline">
+                  <div
+                    v-for="record in callRecords"
+                    :key="record.id"
+                    class="timeline-item"
+                    :class="getTimelineItemClass(record)"
+                  >
+                    <div class="timestamp">{{ formatTime(record.startTime) }}</div>
+                    <div class="call-record" :class="getCallRecordClass(record)">
+                      <h4>
+                        <span :class="{ 'emergency-type-label': record.type === 'emergency' }">
+                          {{ getCallTypeLabel(record.type) }}
+                        </span>
+                        <span v-if="record.type === 'emergency'" class="emergency-indicator">🚨</span>
+                        <span class="caller-badge" :class="getCallerBadgeClass(record)">
+                          {{ record.callerSource === 'dispatch_center' ? '调度中心' : '设备发起' }}
+                        </span>
+                      </h4>
+                      <p>发起方: {{ getCallerDisplayName(record) }}</p>
+                      <p>接收方: {{ record.receivers.map(id => getDeviceById(id)?.name || '未知设备').join(', ') }}</p>
+                      <p v-if="record.duration">通话时长: {{ formatDuration(record.duration) }}</p>
+                      <p>状态: {{ getCallStatusLabel(record.status) }}</p>
+                      <div v-if="record.hasRecording" class="recording-info">
+                        <el-button size="small" type="primary" class="call-record-play-btn" @click="playRecording(record)">播放录音</el-button>
+                        <el-button size="small" class="call-record-download-btn" @click="downloadRecording(record)">下载</el-button>
+                      </div>
+                    </div>
                   </div>
-                </el-timeline-item>
-              </el-timeline>
+                </div>
+              </div>
             </el-tab-pane>
             <el-tab-pane label="录音文件" name="recordings">
               <div class="recording-list">
@@ -343,13 +399,13 @@
                   </div>
                   <div class="recording-actions">
                     <el-tooltip content="播放" placement="top">
-                      <el-button circle size="small" @click="playRecording(recording)"><el-icon><VideoPlay /></el-icon></el-button>
+                      <el-button circle size="small" class="recording-play-btn" @click="playRecording(recording)"><el-icon><VideoPlay /></el-icon></el-button>
                     </el-tooltip>
                     <el-tooltip content="下载" placement="top">
-                      <el-button circle size="small" @click="downloadRecording(recording)"><el-icon><Download /></el-icon></el-button>
+                      <el-button circle size="small" class="recording-download-btn" @click="downloadRecording(recording)"><el-icon><Download /></el-icon></el-button>
                     </el-tooltip>
                     <el-tooltip content="删除" placement="top">
-                      <el-button circle size="small" type="danger" @click="deleteRecording(recording)"><el-icon><Delete /></el-icon></el-button>
+                      <el-button circle size="small" type="danger" class="recording-delete-btn" @click="deleteRecording(recording)"><el-icon><Delete /></el-icon></el-button>
                     </el-tooltip>
                   </div>
                 </div>
@@ -424,11 +480,84 @@
     <el-dialog
       v-model="audioDialogVisible"
       title="录音播放"
-      width="400px"
+      width="500px"
       class="audio-player-dialog"
       @close="audioDialogUrl = ''"
     >
-      <audio v-if="audioDialogUrl" :src="audioDialogUrl" controls style="width: 100%;" autoplay />
+      <div class="audio-player-container">
+        <!-- 录音信息 -->
+        <div class="audio-info">
+          <div class="audio-title">
+            <span class="audio-icon">🎤</span>
+            <span>通话录音文件</span>
+          </div>
+          <div class="audio-details">
+            <span class="detail-item">
+              <span class="detail-icon">🕒</span>
+              录制时间：2024-01-15 14:30:25
+            </span>
+            <span class="detail-item">
+              <span class="detail-icon">📞</span>
+              通话时长：00:02:35
+            </span>
+          </div>
+        </div>
+
+        <!-- 自定义音频播放器 -->
+        <div class="custom-audio-player">
+          <!-- 播放控制区域 -->
+          <div class="player-controls">
+            <button class="control-btn play-btn">
+              <span class="control-icon">▶</span>
+            </button>
+            <button class="control-btn">
+              <span class="control-icon">⏪</span>
+            </button>
+            <button class="control-btn">
+              <span class="control-icon">⏩</span>
+            </button>
+          </div>
+
+          <!-- 进度条区域 -->
+          <div class="progress-area">
+            <span class="time-display current-time">00:00</span>
+            <div class="progress-bar">
+              <div class="progress-track">
+                <div class="progress-fill" style="width: 35%;"></div>
+                <div class="progress-thumb" style="left: 35%;"></div>
+              </div>
+            </div>
+            <span class="time-display total-time">02:35</span>
+          </div>
+
+          <!-- 音量控制 -->
+          <div class="volume-control">
+            <span class="volume-icon">🔊</span>
+            <div class="volume-bar">
+              <div class="volume-track">
+                <div class="volume-fill" style="width: 70%;"></div>
+              </div>
+            </div>
+            <span class="volume-text">70%</span>
+          </div>
+        </div>
+
+        <!-- 操作按钮 -->
+        <div class="audio-actions">
+          <el-button type="primary">
+            <span class="action-icon">📥</span>
+            下载录音
+          </el-button>
+        </div>
+
+        <!-- 隐藏的原生音频元素（用于实际播放控制） -->
+        <audio
+          v-if="audioDialogUrl"
+          :src="audioDialogUrl"
+          style="display: none;"
+          ref="audioElement"
+        />
+      </div>
     </el-dialog>
   </div>
 </template>
@@ -566,6 +695,8 @@ const callRecords = ref<CallRecord[]>([
     id: 'c1',
     type: 'individual',
     caller: '1',
+    callerSource: 'device',
+    callerDisplayName: '对讲机-01',
     receivers: ['4'],
     startTime: new Date(Date.now() - 3600000),
     endTime: new Date(Date.now() - 3550000),
@@ -577,6 +708,8 @@ const callRecords = ref<CallRecord[]>([
     id: 'c2',
     type: 'group',
     caller: '3',
+    callerSource: 'dispatch_center',
+    callerDisplayName: '调度中心',
     receivers: ['1', '4', '6'],
     startTime: new Date(Date.now() - 1800000),
     endTime: new Date(Date.now() - 1700000),
@@ -588,6 +721,8 @@ const callRecords = ref<CallRecord[]>([
     id: 'c3',
     type: 'dynamic',
     caller: '7',
+    callerSource: 'device',
+    callerDisplayName: '手持台-02',
     receivers: ['1', '3', '5'],
     startTime: new Date(Date.now() - 900000),
     status: 'failed',
@@ -597,6 +732,8 @@ const callRecords = ref<CallRecord[]>([
     id: 'c4',
     type: 'emergency',
     caller: '1',
+    callerSource: 'dispatch_center',
+    callerDisplayName: '调度中心',
     receivers: ['2'],
     startTime: new Date(Date.now() - 300000),
     endTime: new Date(Date.now() - 240000),
@@ -614,7 +751,7 @@ const selectedDevices = ref<DispatchDevice[]>([]);
 const activeCall = ref<CallRecord | null>(null);
 const callStartTime = ref<number | null>(null);
 const callDuration = ref('00:00');
-const talkControlData = ref<{ id: string; name: string; hasTalkRight: boolean; volume: number; isMuted: boolean }[]>([]);
+const talkControlData = ref<{ id: string; name: string; hasTalkRight: boolean; volume: number; isMuted: boolean; isSpeaking: boolean; savedVolume?: number }[]>([]);
 const groupDialogVisible = ref(false);
 const editingGroup = ref<DispatchGroup | null>(null);
 const groupForm = ref<{ name: string; type: 'static' | 'dynamic' | 'mixed'; devices: string[] }>({
@@ -622,12 +759,21 @@ const groupForm = ref<{ name: string; type: 'static' | 'dynamic' | 'mixed'; devi
   type: 'static',
   devices: []
 });
+
+// 语音活动检测相关状态
+const audioContext = ref<AudioContext | null>(null);
+const audioAnalysers = ref<Map<string, AnalyserNode>>(new Map());
+const vadTimers = ref<Map<string, number>>(new Map());
+const speakingThreshold = ref(30); // 语音检测阈值
+const speakingTimeout = ref(1000); // 停止说话后的延迟时间(ms)
 const availableDevices = ref<DispatchDevice[]>([]);
 const emergencyDialogVisible = ref(false);
 const emergencyDevice = ref<DispatchDevice | null>(null);
 const isRecording = ref(false);
 const mainVolume = ref(80);
 const micVolume = ref(70);
+const isDispatcherMuted = ref(false);
+const savedMicVolume = ref(70);
 const activeRecordTab = ref('calls');
 const audioDialogVisible = ref(false);
 const audioDialogUrl = ref('');
@@ -640,8 +786,8 @@ let durationTimer: number | null = null;
 // 计算属性：根据搜索关键词过滤设备
 const filteredDevices = computed(() => {
   if (!searchKeyword.value) return devices.value;
-  
-  return devices.value.filter(device => 
+
+  return devices.value.filter(device =>
     device.name.toLowerCase().includes(searchKeyword.value.toLowerCase()) ||
     getDeviceTypeLabel(device.type).toLowerCase().includes(searchKeyword.value.toLowerCase())
   );
@@ -708,6 +854,53 @@ const getCallStatusLabel = (status: string) => {
 const getDeviceById = (id?: string) => {
   if (!id) return null;
   return devices.value.find(device => device.id === id);
+};
+
+// 获取发起方显示名称
+const getCallerDisplayName = (record: CallRecord) => {
+  // 优先使用 callerDisplayName
+  if (record.callerDisplayName) {
+    return record.callerDisplayName;
+  }
+
+  // 根据 callerSource 决定显示逻辑
+  if (record.callerSource === 'dispatch_center') {
+    return '调度中心';
+  } else {
+    // 设备发起的呼叫，显示设备名称
+    const device = getDeviceById(record.caller);
+    return device?.name || '未知设备';
+  }
+};
+
+// 获取时间线项目样式类
+const getTimelineItemClass = (record: CallRecord) => {
+  // 紧急呼叫优先显示为红色
+  if (record.type === 'emergency') {
+    return 'emergency';
+  }
+
+  switch (record.status) {
+    case 'completed': return 'success';
+    case 'failed': return 'danger';
+    case 'ongoing': return 'warning';
+    default: return 'primary';
+  }
+};
+
+// 获取通话记录卡片样式类
+const getCallRecordClass = (record: CallRecord) => {
+  const baseClass = record.callerSource === 'dispatch_center' ? 'dispatch-center' : 'device';
+  // 紧急呼叫添加特殊样式类
+  if (record.type === 'emergency') {
+    return `${baseClass} emergency-call`;
+  }
+  return baseClass;
+};
+
+// 获取发起方标识样式类
+const getCallerBadgeClass = (record: CallRecord) => {
+  return record.callerSource === 'dispatch_center' ? 'dispatch-center' : 'device';
 };
 
 // 格式化时间
@@ -792,7 +985,7 @@ const startGroupCall = () => {
   const uniqueIds = Array.from(new Set(groupDeviceIds));
   if (uniqueIds.length === 0) return;
   const caller = devices.value[0];
-  startCall('group', caller.id, uniqueIds);
+  startCall('group', caller.id, uniqueIds, 'dispatch_center');
 };
 
 // 动态组呼：分组+单独设备一起组呼
@@ -807,76 +1000,69 @@ const startDynamicGroupCall = () => {
   const uniqueIds = Array.from(new Set(allIds));
   if (uniqueIds.length === 0) return;
   const caller = devices.value[0];
-  startCall('dynamic', caller.id, uniqueIds);
+  startCall('dynamic', caller.id, uniqueIds, 'dispatch_center');
 };
 
-// 单呼：只允许选中一个设备或一个分组
+// 单呼：只允许选中一个设备
 const startIndividualCall = () => {
   if (selectedDevices.value.length === 1 && !hasSelectedGroups.value) {
     const caller = devices.value[0];
     const receiver = selectedDevices.value[0];
-    startCall('individual', caller.id, [receiver.id]);
-  } else if (hasSelectedGroups.value && selectedDevices.value.length === 0) {
-    // 选中一个分组时，组内所有设备作为接收方
-    const groupDeviceIds = Object.entries(selectedGroups)
-      .filter(([_, checked]) => checked)
-      .flatMap(([groupId]) => {
-        const group = groups.value.find(g => g.id === groupId);
-        return group ? group.devices : [];
-      });
-    if (groupDeviceIds.length === 0) return;
-    const caller = devices.value[0];
-    startCall('individual', caller.id, groupDeviceIds);
+    startCall('individual', caller.id, [receiver.id], 'dispatch_center');
   }
 };
 
 // 开始通话
-const startCall = (type: 'individual' | 'group' | 'dynamic' | 'mixed', callerId: string, receiverIds: string[]) => {
+const startCall = (type: 'individual' | 'group' | 'dynamic' | 'mixed', callerId: string, receiverIds: string[], callerSource: 'dispatch_center' | 'device' = 'dispatch_center') => {
   // 创建新的通话记录
   const newCall: CallRecord = {
     id: 'call-' + Date.now(),
     type,
     caller: callerId,
+    callerSource,
+    callerDisplayName: callerSource === 'dispatch_center' ? '调度中心' : getDeviceById(callerId)?.name || callerId,
     receivers: receiverIds,
     startTime: new Date(),
     status: 'ongoing',
     hasRecording: false
   };
-  
+
   // 设置当前通话
   activeCall.value = newCall;
   callStartTime.value = Date.now();
-  
-  // 初始化话权控制数据
-  talkControlData.value = [
-    { id: callerId, name: getDeviceById(callerId)?.name || '', hasTalkRight: true, volume: 80, isMuted: false },
-    ...receiverIds.map(id => ({
-      id,
-      name: getDeviceById(id)?.name || '',
-      hasTalkRight: false,
-      volume: 80,
-      isMuted: false
-    }))
-  ];
-  
+
+  // 初始化话权控制数据 - 只包含远端设备，不包含调度台
+  talkControlData.value = receiverIds.map(id => ({
+    id,
+    name: getDeviceById(id)?.name || '',
+    hasTalkRight: false,
+    volume: 80,
+    isMuted: false,
+    isSpeaking: false,
+    savedVolume: undefined
+  }));
+
   // 启动通话计时器
   startCallTimer();
-  
+
   // 更新设备状态为忙碌
   updateDeviceStatus(callerId, 'busy');
   receiverIds.forEach(id => updateDeviceStatus(id, 'busy'));
-  
+
   // 添加到通话记录
   callRecords.value.unshift(newCall);
+
+  // 启动音频监听（模拟）
+  initCallAudioMonitoring();
 };
 
 // 结束通话
 const endCall = () => {
   if (!activeCall.value || !callStartTime.value) return;
-  
+
   // 计算通话时长
   const duration = Math.floor((Date.now() - callStartTime.value) / 1000);
-  
+
   // 更新通话记录
   const callIndex = callRecords.value.findIndex(record => record.id === activeCall.value?.id);
   if (callIndex >= 0) {
@@ -885,30 +1071,98 @@ const endCall = () => {
     callRecords.value[callIndex].duration = duration;
     callRecords.value[callIndex].hasRecording = isRecording.value;
   }
-  
+
   // 恢复设备状态为在线
   if (activeCall.value.caller) {
     updateDeviceStatus(activeCall.value.caller, 'online');
   }
   activeCall.value.receivers.forEach(id => updateDeviceStatus(id, 'online'));
-  
+
+  // 停止音频监听
+  stopCallAudioMonitoring();
+
   // 清除当前通话
   activeCall.value = null;
   callStartTime.value = null;
   isRecording.value = false;
-  
+
   // 停止计时器
   stopCallTimer();
 };
 
 // 切换话权
-const toggleTalkRight = (device: { id: string; name: string; hasTalkRight: boolean; volume: number; isMuted: boolean }) => {
+const toggleTalkRight = (device: { id: string; name: string; hasTalkRight: boolean; volume: number; isMuted: boolean; isSpeaking: boolean }) => {
+  const wasHasTalkRight = device.hasTalkRight;
   device.hasTalkRight = !device.hasTalkRight;
+
+  // 话权状态变化处理
+  if (wasHasTalkRight && !device.hasTalkRight) {
+    // 失去话权：立即清除说话状态
+    device.isSpeaking = false;
+    // 清除相关的定时器
+    const existingTimer = vadTimers.value.get(device.id);
+    if (existingTimer) {
+      clearTimeout(existingTimer);
+      vadTimers.value.delete(device.id);
+    }
+    console.log(`设备 ${device.name} 失去话权，清除说话状态`);
+  } else if (!wasHasTalkRight && device.hasTalkRight) {
+    // 获得话权：如果当前有音频活动，立即检测说话状态
+    console.log(`设备 ${device.name} 获得话权，开始监听音频活动`);
+    // 触发一次音频活动检测，以便立即响应当前的音频状态
+    triggerImmediateVoiceDetection(device.id);
+  }
 };
 
 // 静音设备
-const muteDevice = (device: { id: string; name: string; hasTalkRight: boolean; volume: number; isMuted: boolean }) => {
-  device.isMuted = !device.isMuted;
+const muteDevice = (device: { id: string; name: string; hasTalkRight: boolean; volume: number; isMuted: boolean; isSpeaking: boolean; savedVolume?: number }) => {
+  if (device.isMuted) {
+    // 取消静音：恢复之前保存的音量
+    device.isMuted = false;
+    if (device.savedVolume !== undefined) {
+      device.volume = device.savedVolume;
+      device.savedVolume = undefined;
+    }
+    console.log(`设备 ${device.name} 取消静音，恢复音量至 ${device.volume}`);
+  } else {
+    // 静音：保存当前音量并设置为0
+    device.savedVolume = device.volume;
+    device.volume = 0;
+    device.isMuted = true;
+    console.log(`设备 ${device.name} 静音，保存音量 ${device.savedVolume}`);
+  }
+};
+
+// 音量变化处理
+const onVolumeChange = (device: { id: string; name: string; hasTalkRight: boolean; volume: number; isMuted: boolean; isSpeaking: boolean; savedVolume?: number }) => {
+  // 如果设备处于静音状态，用户调整音量时自动取消静音
+  if (device.isMuted && device.volume > 0) {
+    device.isMuted = false;
+    device.savedVolume = undefined;
+    console.log(`设备 ${device.name} 调整音量至 ${device.volume}，自动取消静音`);
+  }
+  // 如果用户将音量调至0，自动静音
+  else if (!device.isMuted && device.volume === 0) {
+    device.savedVolume = device.volume > 0 ? device.volume : 50; // 默认恢复音量
+    device.isMuted = true;
+    console.log(`设备 ${device.name} 音量调至0，自动静音`);
+  }
+};
+
+// 切换调度台静音状态
+const toggleDispatcherMute = () => {
+  if (isDispatcherMuted.value) {
+    // 取消静音：恢复之前保存的麦克风音量
+    isDispatcherMuted.value = false;
+    micVolume.value = savedMicVolume.value;
+    console.log(`调度台取消静音，恢复麦克风音量至 ${micVolume.value}`);
+  } else {
+    // 静音：保存当前麦克风音量并设置为0
+    savedMicVolume.value = micVolume.value;
+    micVolume.value = 0;
+    isDispatcherMuted.value = true;
+    console.log(`调度台静音，保存麦克风音量 ${savedMicVolume.value}`);
+  }
 };
 
 // 更新设备状态
@@ -924,10 +1178,10 @@ const startCallTimer = () => {
   if (durationTimer !== null) {
     stopCallTimer();
   }
-  
+
   durationTimer = window.setInterval(() => {
     if (!callStartTime.value) return;
-    
+
     const elapsedSeconds = Math.floor((Date.now() - callStartTime.value) / 1000);
     callDuration.value = formatDuration(elapsedSeconds);
   }, 1000);
@@ -1046,7 +1300,10 @@ const exportRecords = () => {
   console.log('导出通话记录');
 };
 
-
+// 模拟设备间直接发起的呼叫（用于测试发起方显示）
+const simulateDeviceCall = (callerId: string, receiverIds: string[], type: 'individual' | 'group' = 'individual') => {
+  startCall(type, callerId, receiverIds, 'device');
+};
 
 const emergencyCall = (device: DispatchDevice) => {
   emergencyDialogVisible.value = true;
@@ -1061,28 +1318,23 @@ const confirmEmergencyCall = async () => {
     await nextTick();
   }
   // 发起紧急呼叫
-  startCall('individual', devices.value[0].id, [emergencyDevice.value.id]);
+  startCall('individual', devices.value[0].id, [emergencyDevice.value.id], 'dispatch_center');
   emergencyDialogVisible.value = false;
   await nextTick();
   if (activeCall.value) {
     activeCall.value.type = 'emergency';
     // 替换已选设备为紧急呼叫目标
     selectedDevices.value.splice(0, selectedDevices.value.length, emergencyDevice.value);
-    // 同步话权控制
+    // 同步话权控制 - 只包含紧急设备，不包含调度台
     talkControlData.value.splice(0, talkControlData.value.length,
-      {
-        id: devices.value[0].id,
-        name: getDeviceById(devices.value[0].id)?.name || '',
-        hasTalkRight: true,
-        volume: 80,
-        isMuted: false
-      },
       {
         id: emergencyDevice.value.id,
         name: emergencyDevice.value.name,
         hasTalkRight: false,
         volume: 80,
-        isMuted: false
+        isMuted: false,
+        isSpeaking: false,
+        savedVolume: undefined
       }
     );
   }
@@ -1103,6 +1355,259 @@ const isDeviceSelectionDisabled = computed(() => {
 function isDeviceSelected(id: string) {
   return selectedDevices.value.some(d => d.id === id);
 }
+
+// 检查设备是否正在说话
+function isDeviceSpeaking(deviceId: string) {
+  const device = talkControlData.value.find(d => d.id === deviceId);
+  return device ? device.isSpeaking : false;
+}
+
+// 初始化音频上下文
+const initAudioContext = () => {
+  if (!audioContext.value) {
+    audioContext.value = new (window.AudioContext || (window as any).webkitAudioContext)();
+  }
+  return audioContext.value;
+};
+
+// 创建音频分析器
+const createAudioAnalyser = (deviceId: string, audioStream: MediaStream): AnalyserNode => {
+  const context = initAudioContext();
+  const analyser = context.createAnalyser();
+  const source = context.createMediaStreamSource(audioStream);
+
+  analyser.fftSize = 256;
+  analyser.smoothingTimeConstant = 0.8;
+  source.connect(analyser);
+
+  audioAnalysers.value.set(deviceId, analyser);
+  return analyser;
+};
+
+// 语音活动检测
+const detectVoiceActivity = (deviceId: string, analyser: AnalyserNode) => {
+  const bufferLength = analyser.frequencyBinCount;
+  const dataArray = new Uint8Array(bufferLength);
+
+  const checkAudioLevel = () => {
+    analyser.getByteFrequencyData(dataArray);
+
+    // 计算音频能量
+    let sum = 0;
+    for (let i = 0; i < bufferLength; i++) {
+      sum += dataArray[i];
+    }
+    const average = sum / bufferLength;
+
+    // 检测是否超过阈值
+    const isSpeaking = average > speakingThreshold.value;
+    updateDeviceSpeakingStatus(deviceId, isSpeaking);
+
+    // 继续检测
+    if (audioAnalysers.value.has(deviceId)) {
+      requestAnimationFrame(checkAudioLevel);
+    }
+  };
+
+  checkAudioLevel();
+};
+
+// 更新设备说话状态
+const updateDeviceSpeakingStatus = (deviceId: string, isSpeaking: boolean) => {
+  const device = talkControlData.value.find(d => d.id === deviceId);
+  if (!device) return;
+
+  // 清除之前的定时器
+  const existingTimer = vadTimers.value.get(deviceId);
+  if (existingTimer) {
+    clearTimeout(existingTimer);
+    vadTimers.value.delete(deviceId);
+  }
+
+  if (isSpeaking) {
+    // 话权前置条件：只有拥有话权的设备才能显示说话状态
+    if (device.hasTalkRight) {
+      device.isSpeaking = true;
+      console.log(`设备 ${device.name} 开始说话（有话权）`);
+    } else {
+      console.log(`设备 ${device.name} 有音频活动但无话权，不显示说话状态`);
+    }
+  } else {
+    // 延迟设置为非说话状态，避免频繁切换
+    const timer = window.setTimeout(() => {
+      device.isSpeaking = false;
+      vadTimers.value.delete(deviceId);
+      console.log(`设备 ${device.name} 停止说话`);
+    }, speakingTimeout.value);
+    vadTimers.value.set(deviceId, timer);
+  }
+};
+
+// 开始监听设备音频
+const startAudioMonitoring = (deviceId: string, audioStream: MediaStream) => {
+  try {
+    const analyser = createAudioAnalyser(deviceId, audioStream);
+    detectVoiceActivity(deviceId, analyser);
+    console.log(`开始监听设备 ${deviceId} 的音频活动`);
+  } catch (error) {
+    console.error(`设备 ${deviceId} 音频监听初始化失败:`, error);
+  }
+};
+
+// 停止监听设备音频
+const stopAudioMonitoring = (deviceId: string) => {
+  // 清理分析器
+  audioAnalysers.value.delete(deviceId);
+
+  // 清理定时器
+  const timer = vadTimers.value.get(deviceId);
+  if (timer) {
+    clearTimeout(timer);
+    vadTimers.value.delete(deviceId);
+  }
+
+  // 重置说话状态
+  const device = talkControlData.value.find(d => d.id === deviceId);
+  if (device) {
+    device.isSpeaking = false;
+  }
+
+  console.log(`停止监听设备 ${deviceId} 的音频活动`);
+};
+
+// 立即触发语音检测（用于话权变化时的即时响应）
+const triggerImmediateVoiceDetection = (deviceId: string) => {
+  const analyser = audioAnalysers.value.get(deviceId);
+  if (!analyser) return;
+
+  // 立即检测一次音频活动
+  const bufferLength = analyser.frequencyBinCount;
+  const dataArray = new Uint8Array(bufferLength);
+  analyser.getByteFrequencyData(dataArray);
+
+  // 计算音频能量
+  let sum = 0;
+  for (let i = 0; i < bufferLength; i++) {
+    sum += dataArray[i];
+  }
+  const average = sum / bufferLength;
+
+  // 检测是否超过阈值
+  const isSpeaking = average > speakingThreshold.value;
+  if (isSpeaking) {
+    updateDeviceSpeakingStatus(deviceId, true);
+  }
+};
+
+// 检查设备是否有话权
+const hasDeviceTalkRight = (deviceId: string): boolean => {
+  const device = talkControlData.value.find(d => d.id === deviceId);
+  return device ? device.hasTalkRight : false;
+};
+
+// 清除所有无话权设备的说话状态
+const clearSpeakingStatusForDevicesWithoutTalkRight = () => {
+  talkControlData.value.forEach(device => {
+    if (!device.hasTalkRight && device.isSpeaking) {
+      device.isSpeaking = false;
+      // 清除相关定时器
+      const existingTimer = vadTimers.value.get(device.id);
+      if (existingTimer) {
+        clearTimeout(existingTimer);
+        vadTimers.value.delete(device.id);
+      }
+    }
+  });
+};
+
+// 初始化通话音频监听
+const initCallAudioMonitoring = async () => {
+  if (!activeCall.value) return;
+
+  try {
+    // 模拟获取音频流并开始监听
+    // 在实际应用中，这里应该从WebRTC或其他音频源获取真实的音频流
+    const allDeviceIds = [activeCall.value.caller, ...activeCall.value.receivers];
+
+    for (const deviceId of allDeviceIds) {
+      // 模拟创建音频流
+      const mockAudioStream = await createMockAudioStream();
+      startAudioMonitoring(deviceId, mockAudioStream);
+    }
+
+    // 启动模拟说话检测（用于演示）
+    startMockSpeakingSimulation();
+
+  } catch (error) {
+    console.error('初始化音频监听失败:', error);
+  }
+};
+
+// 停止通话音频监听
+const stopCallAudioMonitoring = () => {
+  if (!activeCall.value) return;
+
+  const allDeviceIds = [activeCall.value.caller, ...activeCall.value.receivers];
+  allDeviceIds.forEach(deviceId => {
+    stopAudioMonitoring(deviceId);
+  });
+
+  // 停止模拟说话检测
+  stopMockSpeakingSimulation();
+};
+
+// 创建模拟音频流（用于演示）
+const createMockAudioStream = async (): Promise<MediaStream> => {
+  try {
+    // 尝试获取真实的音频流
+    return await navigator.mediaDevices.getUserMedia({ audio: true });
+  } catch (error) {
+    // 如果无法获取真实音频流，创建一个模拟的
+    console.warn('无法获取真实音频流，使用模拟音频流');
+    const audioContext = initAudioContext();
+    const oscillator = audioContext.createOscillator();
+    const destination = audioContext.createMediaStreamDestination();
+    oscillator.connect(destination);
+    oscillator.start();
+    return destination.stream;
+  }
+};
+
+// 模拟说话检测（用于演示）
+let mockSpeakingInterval: number | null = null;
+
+const startMockSpeakingSimulation = () => {
+  if (mockSpeakingInterval) return;
+
+  mockSpeakingInterval = window.setInterval(() => {
+    if (!activeCall.value || talkControlData.value.length === 0) return;
+
+    // 只从有话权的设备中选择
+    const devicesWithTalkRight = talkControlData.value.filter(d => d.hasTalkRight);
+    if (devicesWithTalkRight.length === 0) return;
+
+    // 随机选择一个有话权的设备进行说话模拟
+    const randomIndex = Math.floor(Math.random() * devicesWithTalkRight.length);
+    const device = devicesWithTalkRight[randomIndex];
+
+    // 模拟说话状态变化
+    if (Math.random() > 0.7) { // 30% 概率开始说话
+      updateDeviceSpeakingStatus(device.id, true);
+
+      // 2-5秒后停止说话
+      setTimeout(() => {
+        updateDeviceSpeakingStatus(device.id, false);
+      }, 2000 + Math.random() * 3000);
+    }
+  }, 3000); // 每3秒检查一次
+};
+
+const stopMockSpeakingSimulation = () => {
+  if (mockSpeakingInterval) {
+    clearInterval(mockSpeakingInterval);
+    mockSpeakingInterval = null;
+  }
+};
 
 const isEmergencyCall = computed(() => activeCall.value && activeCall.value.type === 'emergency');
 function isEmergencyTarget(device: DispatchDevice) {
@@ -1129,26 +1634,65 @@ onMounted(() => {
 // 组件卸载时
 onUnmounted(() => {
   stopCallTimer();
+  stopCallAudioMonitoring();
+  stopMockSpeakingSimulation();
+
+  // 清理音频上下文
+  if (audioContext.value) {
+    audioContext.value.close();
+  }
 });
 
 // 监听selectedDevices变化，动态组呼通话中自动同步话权控制
 watch(selectedDevices, (newVal, oldVal) => {
   if (activeCall.value && activeCall.value.type === 'dynamic') {
-    // 找出新增的设备
+    // 找出新增的设备，排除调度台设备
     const currentIds = talkControlData.value.map(d => d.id);
-    const newDevices = newVal.filter(d => !currentIds.includes(d.id));
+    const newDevices = newVal.filter(d =>
+      !currentIds.includes(d.id) &&
+      d.id !== activeCall.value?.caller // 排除调度台设备
+    );
     newDevices.forEach(device => {
       talkControlData.value.push({
         id: device.id,
         name: device.name,
-        hasTalkRight: false,
+        hasTalkRight: false, // 新增设备默认无话权
         volume: 80,
-        isMuted: false
+        isMuted: false,
+        isSpeaking: false, // 新增设备默认不在说话
+        savedVolume: undefined
       });
     });
+
+    // 找出被移除的设备，清理其音频监听和说话状态
+    const removedDeviceIds = talkControlData.value
+      .filter(d => !newVal.some(dev => dev.id === d.id) && !d.hasTalkRight)
+      .map(d => d.id);
+
+    removedDeviceIds.forEach(deviceId => {
+      stopAudioMonitoring(deviceId);
+    });
+
     // 移除已不在selectedDevices中的设备
     talkControlData.value = talkControlData.value.filter(d => newVal.some(dev => dev.id === d.id) || d.hasTalkRight);
   }
+}, { deep: true });
+
+// 监听话权控制数据变化，确保说话状态与话权状态同步
+watch(talkControlData, (newVal, oldVal) => {
+  if (!oldVal || oldVal.length === 0) return;
+
+  // 检查话权状态变化
+  newVal.forEach(newDevice => {
+    const oldDevice = oldVal.find(d => d.id === newDevice.id);
+    if (oldDevice && oldDevice.hasTalkRight !== newDevice.hasTalkRight) {
+      if (!newDevice.hasTalkRight && newDevice.isSpeaking) {
+        // 失去话权且正在说话，立即清除说话状态
+        newDevice.isSpeaking = false;
+        console.log(`设备 ${newDevice.name} 失去话权，自动清除说话状态`);
+      }
+    }
+  });
 }, { deep: true });
 </script>
 
@@ -1545,46 +2089,310 @@ watch(selectedDevices, (newVal, oldVal) => {
   background: rgba(64, 158, 255, 0.1) !important;
 }
 
-/* 进度条大屏样式 */
-.large-screen-theme .el-progress-bar__outer {
-  background: rgba(15, 20, 25, 0.8) !important;
-  border: 1px solid rgba(64, 158, 255, 0.3) !important;
+/* 进度条大屏样式（穿透 el-progress 内部结构） */
+.large-screen-theme :deep(.el-progress-bar__outer) {
+  background: rgba(15, 20, 25, 0.85) !important;
+  border: 2px solid rgba(255, 255, 255, 0.5) !important;
+  height: 14px !important;
+  border-radius: 8px !important;
 }
 
-.large-screen-theme .el-progress-bar__inner {
-  background: linear-gradient(90deg, #00d4aa 0%, #74b9ff 100%) !important;
-  box-shadow: 0 0 15px rgba(0, 212, 170, 0.6) !important;
+.large-screen-theme :deep(.el-progress-bar__inner) {
+  background: linear-gradient(90deg, #ffd166 0%, #06d6a0 100%) !important;
+  box-shadow: 0 0 18px rgba(255, 209, 102, 0.9) !important,
+              0 0 24px rgba(6, 214, 160, 0.8) !important;
+  border-radius: 8px !important;
 }
 
-/* 滑块组件大屏样式 - 增强可见性 */
-.large-screen-theme .el-slider__runway {
-  background: rgba(255, 255, 255, 0.25) !important;
-  border: 2px solid rgba(116, 185, 255, 0.5) !important;
-  height: 10px !important;
-  border-radius: 5px !important;
-  box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.3) !important;
+/* 滑块组件大屏样式 - 增强可见性（穿透子组件） */
+.large-screen-theme :deep(.el-slider__runway) {
+  background: rgba(255, 255, 255, 0.35) !important;
+  border: 2px solid rgba(255, 255, 255, 0.65) !important;
+  height: 16px !important;
+  border-radius: 8px !important;
+  box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.45) !important,
+              0 0 14px rgba(6, 214, 160, 0.35) !important;
 }
 
-.large-screen-theme .el-slider__bar {
-  background: linear-gradient(90deg, #74b9ff 0%, #00d4aa 100%) !important;
-  box-shadow: 0 0 15px rgba(116, 185, 255, 0.8) !important;
-  border-radius: 5px !important;
-  height: 10px !important;
+.large-screen-theme :deep(.el-slider__bar) {
+  background: linear-gradient(90deg, #ffd166 0%, #06d6a0 100%) !important;
+  box-shadow: 0 0 18px rgba(255, 209, 102, 0.95) !important,
+              0 0 26px rgba(6, 214, 160, 0.8) !important;
+  border-radius: 8px !important;
+  height: 16px !important;
 }
 
-.large-screen-theme .el-slider__button {
-  background: #74b9ff !important;
-  border: 3px solid #ffffff !important;
-  box-shadow: 0 0 20px rgba(116, 185, 255, 1) !important;
-  width: 22px !important;
-  height: 22px !important;
-  transform: scale(1.1) !important;
+.large-screen-theme :deep(.el-slider__button) {
+  background: #ffffff !important;
+  border: 3px solid #ffd166 !important;
+  box-shadow: 0 0 24px rgba(255, 209, 102, 1) !important,
+              0 0 34px rgba(6, 214, 160, 0.9) !important;
+  width: 26px !important;
+  height: 26px !important;
 }
 
-.large-screen-theme .el-slider__button:hover {
-  background: #00d4aa !important;
-  box-shadow: 0 0 25px rgba(0, 212, 170, 1) !important;
-  transform: scale(1.3) !important;
+
+/* 大屏按钮风格体系（仅作用于本组件容器） */
+.large-screen-theme :deep(.el-button) {
+  border: none !important;
+  border-radius: 10px !important;
+  color: #e8f4fd !important;
+  background: rgba(255, 255, 255, 0.06) !important;
+  backdrop-filter: blur(8px) !important;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.25) !important;
+  transition: all .25s ease !important;
+}
+
+/* 悬浮/按下通用反馈 */
+.large-screen-theme :deep(.el-button:hover) {
+  transform: translateY(-1px) !important;
+  filter: brightness(1.05) !important;
+}
+.large-screen-theme :deep(.el-button:active) {
+  transform: translateY(0) scale(.98) !important;
+}
+.large-screen-theme :deep(.el-button.is-disabled),
+.large-screen-theme :deep(.el-button.is-disabled:hover) {
+  opacity: .6 !important;
+  filter: saturate(.7) !important;
+  box-shadow: none !important;
+}
+
+/* 语义色变体 */
+.large-screen-theme :deep(.el-button--default:not(.is-plain)) {
+  background: linear-gradient(135deg, rgba(255,255,255,.08), rgba(255,255,255,.03)) !important;
+  border: 1px solid rgba(255,255,255,.15) !important;
+}
+.large-screen-theme :deep(.el-button--primary:not(.is-plain)) {
+  background: linear-gradient(135deg, #3aa0ff 0%, #15c6ff 100%) !important;
+  box-shadow: 0 8px 24px rgba(58,160,255,.35) !important;
+}
+.large-screen-theme :deep(.el-button--success:not(.is-plain)) {
+  background: linear-gradient(135deg, #2ecc71 0%, #1abc9c 100%) !important;
+  box-shadow: 0 8px 24px rgba(46,204,113,.35) !important;
+}
+.large-screen-theme :deep(.el-button--warning:not(.is-plain)) {
+  background: linear-gradient(135deg, #f6c74e 0%, #ff9f1a 100%) !important;
+  box-shadow: 0 8px 24px rgba(246,199,78,.35) !important;
+  color: #15202b !important;
+}
+.large-screen-theme :deep(.el-button--danger:not(.is-plain)) {
+  background: linear-gradient(135deg, #ff5a6d 0%, #ff2d55 100%) !important;
+  box-shadow: 0 8px 26px rgba(255,45,85,.4) !important;
+}
+.large-screen-theme :deep(.el-button--info:not(.is-plain)) {
+  background: linear-gradient(135deg, #9b9bff 0%, #63b3ff 100%) !important;
+  box-shadow: 0 8px 24px rgba(99,179,255,.35) !important;
+}
+
+/* 朴素（plain）→ 轻量/幽灵按钮 */
+.large-screen-theme :deep(.el-button.is-plain) {
+  background: transparent !important;
+  color: #d7e9ff !important;
+  border: 1px solid rgba(255,255,255,.35) !important;
+  box-shadow: 0 0 0 3px rgba(255,255,255,.04) inset !important;
+}
+.large-screen-theme :deep(.el-button.is-plain:hover) {
+  background: rgba(255,255,255,.06) !important;
+}
+
+/* 文本/链接按钮 */
+.large-screen-theme :deep(.el-button.is-text) {
+  background: transparent !important;
+  color: #9ecbff !important;
+  text-decoration: none !important;
+}
+.large-screen-theme :deep(.el-button.is-text:hover) {
+  color: #cfe6ff !important;
+}
+
+/* 圆形/圆角按钮（图标类快捷操作） */
+.large-screen-theme :deep(.el-button.is-circle),
+.large-screen-theme :deep(.el-button.is-round) {
+  border-radius: 999px !important;
+}
+.large-screen-theme :deep(.el-button.is-circle) {
+  width: 36px !important; height: 36px !important; padding: 0 !important;
+  background: rgba(255,255,255,.08) !important;
+  border: 1px solid rgba(255,255,255,.2) !important;
+}
+.large-screen-theme :deep(.el-button.is-circle:hover) {
+  box-shadow: 0 0 18px rgba(100, 181, 246, .55) !important;
+}
+
+/* 尺寸微调 */
+.large-screen-theme :deep(.el-button--small) {
+  height: 34px !important; padding: 0 12px !important; font-size: 12px !important;
+}
+.large-screen-theme :deep(.el-button--large),
+.large-screen-theme :deep(.el-button--large.is-round) {
+  height: 44px !important; padding: 0 18px !important; font-size: 15px !important;
+}
+
+/* 按钮组 */
+.large-screen-theme :deep(.el-button-group .el-button) {
+  border-radius: 10px !important;
+}
+.large-screen-theme :deep(.el-button-group .el-button + .el-button) {
+  margin-left: 8px !important; /* 视觉分隔，避免成块 */
+}
+
+.large-screen-theme :deep(.el-slider__button:hover) {
+  background: #ffffff !important;
+  transform: scale(1.2) !important;
+}
+/* 设备列表分组标签按钮差异化样式 */
+.large-screen-theme :deep(.group-select-btn) {
+  background: linear-gradient(135deg, #3aa0ff 0%, #15c6ff 100%) !important;
+  border: none !important;
+  color: #ffffff !important;
+  box-shadow: 0 4px 12px rgba(58, 160, 255, 0.4) !important;
+  transition: all 0.25s ease !important;
+}
+
+.large-screen-theme :deep(.group-select-btn:hover) {
+  transform: translateY(-2px) scale(1.05) !important;
+  box-shadow: 0 6px 20px rgba(58, 160, 255, 0.6) !important;
+}
+
+.large-screen-theme :deep(.group-edit-btn) {
+  background: linear-gradient(135deg, #f6c74e 0%, #ff9f1a 100%) !important;
+  border: none !important;
+  color: #15202b !important;
+  box-shadow: 0 4px 12px rgba(246, 199, 78, 0.4) !important;
+  transition: all 0.25s ease !important;
+}
+
+.large-screen-theme :deep(.group-edit-btn:hover) {
+  transform: translateY(-2px) scale(1.05) !important;
+  box-shadow: 0 6px 20px rgba(246, 199, 78, 0.6) !important;
+}
+
+.large-screen-theme :deep(.group-delete-btn) {
+  background: linear-gradient(135deg, #ff5a6d 0%, #ff2d55 100%) !important;
+  border: none !important;
+  color: #ffffff !important;
+  box-shadow: 0 4px 12px rgba(255, 45, 85, 0.4) !important;
+  transition: all 0.25s ease !important;
+}
+
+.large-screen-theme :deep(.group-delete-btn:hover) {
+  transform: translateY(-2px) scale(1.05) !important;
+  box-shadow: 0 6px 20px rgba(255, 45, 85, 0.6) !important;
+}
+
+/* 录音文件操作按钮差异化样式 */
+.large-screen-theme :deep(.recording-play-btn) {
+  background: linear-gradient(135deg, #2ecc71 0%, #1abc9c 100%) !important;
+  border: none !important;
+  color: #ffffff !important;
+  box-shadow: 0 4px 12px rgba(46, 204, 113, 0.4) !important;
+  transition: all 0.25s ease !important;
+}
+
+.large-screen-theme :deep(.recording-play-btn:hover) {
+  transform: translateY(-2px) scale(1.05) !important;
+  box-shadow: 0 6px 20px rgba(46, 204, 113, 0.6) !important;
+}
+
+.large-screen-theme :deep(.recording-download-btn) {
+  background: linear-gradient(135deg, #9b9bff 0%, #63b3ff 100%) !important;
+  border: none !important;
+  color: #ffffff !important;
+  box-shadow: 0 4px 12px rgba(99, 179, 255, 0.4) !important;
+  transition: all 0.25s ease !important;
+}
+
+.large-screen-theme :deep(.recording-download-btn:hover) {
+  transform: translateY(-2px) scale(1.05) !important;
+  box-shadow: 0 6px 20px rgba(99, 179, 255, 0.6) !important;
+}
+
+.large-screen-theme :deep(.recording-delete-btn) {
+  background: linear-gradient(135deg, #ff5a6d 0%, #ff2d55 100%) !important;
+  border: none !important;
+  color: #ffffff !important;
+  box-shadow: 0 4px 12px rgba(255, 45, 85, 0.4) !important;
+  transition: all 0.25s ease !important;
+}
+
+.large-screen-theme :deep(.recording-delete-btn:hover) {
+  transform: translateY(-2px) scale(1.05) !important;
+  box-shadow: 0 6px 20px rgba(255, 45, 85, 0.6) !important;
+}
+
+/* 按钮按下效果 */
+.large-screen-theme :deep(.group-select-btn:active),
+.large-screen-theme :deep(.group-edit-btn:active),
+.large-screen-theme :deep(.group-delete-btn:active),
+.large-screen-theme :deep(.recording-play-btn:active),
+.large-screen-theme :deep(.recording-download-btn:active),
+.large-screen-theme :deep(.recording-delete-btn:active) {
+  transform: translateY(0) scale(0.98) !important;
+}
+/* 通话记录中的按钮差异化样式 */
+.large-screen-theme :deep(.call-record-play-btn) {
+  background: linear-gradient(135deg, #2ecc71 0%, #1abc9c 100%) !important;
+  border: none !important;
+  color: #ffffff !important;
+  box-shadow: 0 3px 10px rgba(46, 204, 113, 0.3) !important;
+  border-radius: 8px !important;
+  transition: all 0.25s ease !important;
+}
+
+.large-screen-theme :deep(.call-record-play-btn:hover) {
+  transform: translateY(-1px) !important;
+  box-shadow: 0 5px 15px rgba(46, 204, 113, 0.5) !important;
+}
+
+.large-screen-theme :deep(.call-record-download-btn) {
+  background: linear-gradient(135deg, #9b9bff 0%, #63b3ff 100%) !important;
+  border: none !important;
+  color: #ffffff !important;
+  box-shadow: 0 3px 10px rgba(99, 179, 255, 0.3) !important;
+  border-radius: 8px !important;
+  transition: all 0.25s ease !important;
+}
+
+.large-screen-theme :deep(.call-record-download-btn:hover) {
+  transform: translateY(-1px) !important;
+  box-shadow: 0 5px 15px rgba(99, 179, 255, 0.5) !important;
+}
+
+/* 设备紧急呼叫按钮样式 */
+.large-screen-theme :deep(.device-emergency-btn) {
+  background: linear-gradient(135deg, #ff4757 0%, #ff3742 100%) !important;
+  border: none !important;
+  color: #ffffff !important;
+  box-shadow: 0 3px 10px rgba(255, 71, 87, 0.4), 0 0 0 2px rgba(255, 71, 87, 0.2) !important;
+  border-radius: 6px !important;
+  transition: all 0.25s ease !important;
+  animation: emergency-pulse 2s infinite !important;
+}
+
+.large-screen-theme :deep(.device-emergency-btn:hover) {
+  transform: translateY(-1px) scale(1.05) !important;
+  box-shadow: 0 5px 15px rgba(255, 71, 87, 0.6), 0 0 0 3px rgba(255, 71, 87, 0.3) !important;
+  animation: none !important;
+}
+
+@keyframes emergency-pulse {
+  0%, 100% { box-shadow: 0 3px 10px rgba(255, 71, 87, 0.4), 0 0 0 2px rgba(255, 71, 87, 0.2); }
+  50% { box-shadow: 0 3px 10px rgba(255, 71, 87, 0.6), 0 0 0 4px rgba(255, 71, 87, 0.4); }
+}
+/* 新建预设组按钮样式 */
+.large-screen-theme :deep(.create-group-btn) {
+  background: linear-gradient(135deg, #3aa0ff 0%, #15c6ff 100%) !important;
+  border: none !important;
+  color: #ffffff !important;
+  box-shadow: 0 3px 10px rgba(58, 160, 255, 0.3) !important;
+  border-radius: 8px !important;
+  transition: all 0.25s ease !important;
+}
+
+.large-screen-theme :deep(.create-group-btn:hover) {
+  transform: translateY(-1px) !important;
+  box-shadow: 0 5px 15px rgba(58, 160, 255, 0.5) !important;
 }
 
 /* 对话框大屏样式 - 增强可见性 - 使用更强的选择器 */
@@ -1803,7 +2611,7 @@ body.large-screen-theme .el-dialog__body {
 }
 
 /* 音量控制区域整体样式 */
-.large-screen-theme .volume-control,
+.large-screen-theme .dispatcher-volume-control,
 .large-screen-theme .audio-control {
   background: rgba(26, 31, 46, 0.6) !important;
   border: 1px solid rgba(116, 185, 255, 0.2) !important;
@@ -1828,7 +2636,7 @@ body.large-screen-theme .el-dialog__body {
 
 /* 音量控制标签增强 */
 .large-screen-theme .volume-item span,
-.large-screen-theme .volume-control h3 {
+.large-screen-theme .dispatcher-volume-control h3 {
   color: #74b9ff !important;
   font-weight: bold !important;
   text-shadow: 0 0 10px rgba(116, 185, 255, 0.5) !important;
@@ -1874,31 +2682,33 @@ body.large-screen-theme .el-dialog__body {
 }
 
 /* 音量滑块在表格中的特殊处理 */
-.large-screen-theme .el-table .el-slider,
-.large-screen-theme .el-table .volume-slider {
-  filter: brightness(1.3) contrast(1.1) !important;
+.large-screen-theme :deep(.el-table .el-slider),
+.large-screen-theme :deep(.el-table .volume-slider) {
+  filter: brightness(1.35) contrast(1.15) !important;
 }
 
-.large-screen-theme .el-table .el-slider__runway {
-  background: rgba(255, 255, 255, 0.3) !important;
-  height: 6px !important;
-  border-radius: 3px !important;
-  border: 1px solid rgba(116, 185, 255, 0.4) !important;
+.large-screen-theme :deep(.el-table .el-slider__runway) {
+  background: rgba(255, 255, 255, 0.4) !important;
+  height: 14px !important;
+  border-radius: 8px !important;
+  border: 2px solid rgba(255, 255, 255, 0.65) !important;
 }
 
-.large-screen-theme .el-table .el-slider__bar {
-  background: linear-gradient(90deg, #74b9ff 0%, #00d4aa 100%) !important;
-  height: 6px !important;
-  border-radius: 3px !important;
-  box-shadow: 0 0 12px rgba(116, 185, 255, 0.7) !important;
+.large-screen-theme :deep(.el-table .el-slider__bar) {
+  background: linear-gradient(90deg, #ffd166 0%, #06d6a0 100%) !important;
+  height: 14px !important;
+  border-radius: 8px !important;
+  box-shadow: 0 0 16px rgba(255, 209, 102, 0.9) !important,
+              0 0 22px rgba(6, 214, 160, 0.8) !important;
 }
 
-.large-screen-theme .el-table .el-slider__button {
-  width: 16px !important;
-  height: 16px !important;
-  background: #74b9ff !important;
-  border: 2px solid #ffffff !important;
-  box-shadow: 0 0 15px rgba(116, 185, 255, 0.9) !important;
+.large-screen-theme :deep(.el-table .el-slider__button) {
+  width: 22px !important;
+  height: 22px !important;
+  background: #ffffff !important;
+  border: 3px solid #ffd166 !important;
+  box-shadow: 0 0 22px rgba(255, 209, 102, 1) !important,
+              0 0 28px rgba(6, 214, 160, 0.85) !important;
 }
 
 /* 消息提示大屏样式 */
@@ -2315,14 +3125,14 @@ body.large-screen-theme .el-dialog__body {
   color: #606266;
 }
 
-.volume-control {
+.dispatcher-volume-control {
   margin-top: 24px;
   padding: 16px;
   background: #f8f9fa;
   border-radius: 8px;
 }
 
-.volume-control h3 {
+.dispatcher-volume-control h3 {
   margin-bottom: 16px;
   color: #303133;
   font-size: 14px;
@@ -2343,6 +3153,15 @@ body.large-screen-theme .el-dialog__body {
   margin-bottom: 8px;
   font-size: 13px;
   color: #606266;
+}
+
+.dispatcher-mute-control {
+  margin-top: 16px;
+  text-align: center;
+}
+
+.dispatcher-mute-control .el-button {
+  min-width: 120px;
 }
 
 .talk-control {
@@ -2367,7 +3186,7 @@ body.large-screen-theme .el-dialog__body {
 .selected-devices,
 .call-actions,
 .call-status,
-.volume-control {
+.dispatcher-volume-control {
   flex-shrink: 0; /* 防止被压缩 */
 }
 
@@ -2454,6 +3273,215 @@ body.large-screen-theme .el-dialog__body {
 
 .recording-actions .el-button {
   margin-left: 0;
+}
+
+/* 通话记录滚动容器样式 */
+.call-records-container {
+  height: calc(100vh - 320px); /* 动态计算高度，充分利用可用空间 */
+  min-height: 500px; /* 设置最小高度，确保在小屏幕上也有足够空间 */
+  max-height: 800px; /* 设置最大高度，避免在大屏幕上过高 */
+  overflow-y: auto; /* 启用垂直滚动 */
+  overflow-x: hidden; /* 隐藏水平滚动 */
+  padding-right: 8px; /* 为滚动条留出空间 */
+  margin-right: -8px; /* 抵消padding，保持对齐 */
+}
+
+/* 自定义滚动条样式 */
+.call-records-container::-webkit-scrollbar {
+  width: 6px;
+}
+
+.call-records-container::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 3px;
+}
+
+.call-records-container::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 3px;
+}
+
+.call-records-container::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
+}
+
+/* 响应式高度调整 */
+@media (max-height: 768px) {
+  .call-records-container {
+    height: calc(100vh - 280px); /* 小屏幕高度调整 */
+    min-height: 350px;
+  }
+}
+
+@media (min-height: 1080px) {
+  .call-records-container {
+    height: calc(100vh - 350px); /* 大屏幕高度调整 */
+    max-height: 900px;
+  }
+}
+
+@media (min-height: 1440px) {
+  .call-records-container {
+    height: calc(100vh - 400px); /* 超大屏幕高度调整 */
+    max-height: 1000px;
+  }
+}
+
+/* 通话记录时间线样式 */
+.call-records-timeline {
+  position: relative;
+  padding-left: 30px;
+  min-height: 100%; /* 确保时间线至少占满容器高度 */
+}
+
+.call-records-timeline::before {
+  content: '';
+  position: absolute;
+  left: 15px;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: #e4e7ed;
+}
+
+.timeline-item {
+  position: relative;
+  margin-bottom: 20px;
+}
+
+.timeline-item::before {
+  content: '';
+  position: absolute;
+  left: -23px;
+  top: 5px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #409eff;
+}
+
+.timeline-item.success::before {
+  background: #67c23a;
+}
+
+.timeline-item.warning::before {
+  background: #e6a23c;
+}
+
+.timeline-item.danger::before {
+  background: #f56c6c;
+}
+
+.timeline-item.emergency::before {
+  background: #ff4757;
+  box-shadow: 0 0 8px rgba(255, 71, 87, 0.6);
+  animation: emergency-timeline-pulse 2s infinite;
+}
+
+@keyframes emergency-timeline-pulse {
+  0%, 100% {
+    background: #ff4757;
+    box-shadow: 0 0 8px rgba(255, 71, 87, 0.6);
+  }
+  50% {
+    background: #ff6b6b;
+    box-shadow: 0 0 15px rgba(255, 71, 87, 0.9);
+  }
+}
+
+.timeline-item .timestamp {
+  font-size: 12px;
+  color: #909399;
+  margin-bottom: 5px;
+}
+
+.call-record {
+  background: #f8f9fa;
+  padding: 15px;
+  border-radius: 6px;
+  border-left: 4px solid #409eff;
+}
+
+.call-record.emergency-call {
+  background: #fff5f5;
+  border-left: 4px solid #ff4757;
+  border: 1px solid rgba(255, 71, 87, 0.3);
+  box-shadow: 0 2px 8px rgba(255, 71, 87, 0.2);
+}
+
+.call-record.emergency-call h4 {
+  color: #ff4757;
+  font-weight: bold;
+}
+
+.emergency-type-label {
+  color: #ff4757 !important;
+  font-weight: bold !important;
+}
+
+.emergency-indicator {
+  margin-left: 8px;
+  font-size: 16px;
+  animation: emergency-blink 1.5s infinite;
+}
+
+@keyframes emergency-blink {
+  0%, 50% { opacity: 1; }
+  51%, 100% { opacity: 0.3; }
+}
+
+.call-record.dispatch-center {
+  border-left-color: #67c23a;
+  background: #f0f9ff;
+}
+
+.call-record.device {
+  border-left-color: #e6a23c;
+  background: #fffbf0;
+}
+
+.call-record h4 {
+  margin: 0 0 10px 0;
+  color: #303133;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.call-record p {
+  margin: 5px 0;
+  color: #606266;
+  font-size: 14px;
+}
+
+.caller-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: bold;
+  margin-left: 8px;
+}
+
+.caller-badge.dispatch-center {
+  background: #67c23a;
+  color: white;
+}
+
+.caller-badge.device {
+  background: #e6a23c;
+  color: white;
+}
+
+.call-record .recording-info {
+  margin-top: 12px;
+  padding: 8px 12px;
+  background: rgba(64, 158, 255, 0.1);
+  border-radius: 4px;
+  border-left: 3px solid #409eff;
+}
+
+.call-record .recording-info .el-button {
+  margin-right: 8px;
 }
 
 /* 紧急呼叫对话框样式 */
@@ -2570,6 +3598,223 @@ body.large-screen-theme .audio-player-dialog.el-dialog,
   background: rgba(15, 20, 25, 0.98) !important;
 }
 
+/* 音频播放器容器样式 */
+.audio-player-container {
+  padding: 20px;
+  background: #f8f9fa;
+  border-radius: 8px;
+}
+
+/* 录音信息区域 */
+.audio-info {
+  margin-bottom: 20px;
+  padding: 15px;
+  background: #fff;
+  border-radius: 6px;
+  border-left: 4px solid #409eff;
+}
+
+.audio-title {
+  display: flex;
+  align-items: center;
+  font-size: 16px;
+  font-weight: 600;
+  color: #303133;
+  margin-bottom: 10px;
+}
+
+.audio-icon {
+  margin-right: 8px;
+  font-size: 18px;
+  display: inline-block;
+}
+
+.audio-details {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.detail-item {
+  display: flex;
+  align-items: center;
+  font-size: 14px;
+  color: #606266;
+}
+
+.detail-icon {
+  margin-right: 6px;
+  font-size: 14px;
+  display: inline-block;
+  width: 16px;
+}
+
+/* 自定义音频播放器 */
+.custom-audio-player {
+  background: #fff;
+  border-radius: 8px;
+  padding: 20px;
+  margin-bottom: 20px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* 播放控制按钮 */
+.player-controls {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 15px;
+  margin-bottom: 20px;
+}
+
+.control-btn {
+  width: 45px;
+  height: 45px;
+  border: none;
+  border-radius: 50%;
+  background: #409eff;
+  color: white;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 8px rgba(64, 158, 255, 0.3);
+}
+
+.control-btn:hover {
+  background: #337ecc;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(64, 158, 255, 0.4);
+}
+
+.play-btn {
+  width: 55px;
+  height: 55px;
+  font-size: 22px;
+  background: #67c23a;
+  box-shadow: 0 2px 8px rgba(103, 194, 58, 0.3);
+}
+
+.play-btn:hover {
+  background: #529b2e;
+  box-shadow: 0 4px 12px rgba(103, 194, 58, 0.4);
+}
+
+.control-icon {
+  font-size: inherit;
+  display: inline-block;
+}
+
+/* 进度条区域 */
+.progress-area {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 15px;
+}
+
+.time-display {
+  font-size: 14px;
+  color: #606266;
+  font-family: 'Courier New', monospace;
+  min-width: 45px;
+}
+
+.progress-bar {
+  flex: 1;
+  height: 6px;
+  position: relative;
+}
+
+.progress-track {
+  width: 100%;
+  height: 100%;
+  background: #e4e7ed;
+  border-radius: 3px;
+  position: relative;
+  cursor: pointer;
+}
+
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #409eff 0%, #67c23a 100%);
+  border-radius: 3px;
+  transition: width 0.3s ease;
+}
+
+.progress-thumb {
+  position: absolute;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 14px;
+  height: 14px;
+  background: #409eff;
+  border-radius: 50%;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(64, 158, 255, 0.4);
+  transition: all 0.3s ease;
+}
+
+.progress-thumb:hover {
+  transform: translate(-50%, -50%) scale(1.2);
+  box-shadow: 0 3px 8px rgba(64, 158, 255, 0.6);
+}
+
+/* 录音播放器音量控制 */
+.audio-player-container .volume-control {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.volume-icon {
+  font-size: 16px;
+  display: inline-block;
+}
+
+.audio-player-container .volume-bar {
+  flex: 1;
+  height: 4px;
+  max-width: 100px;
+}
+
+.audio-player-container .volume-track {
+  width: 100%;
+  height: 100%;
+  background: #e4e7ed;
+  border-radius: 2px;
+  position: relative;
+  cursor: pointer;
+}
+
+.audio-player-container .volume-fill {
+  height: 100%;
+  background: #409eff;
+  border-radius: 2px;
+  transition: width 0.3s ease;
+}
+
+.audio-player-container .volume-text {
+  font-size: 12px;
+  color: #909399;
+  min-width: 30px;
+}
+
+/* 操作按钮区域 */
+.audio-actions {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+}
+
+.action-icon {
+  margin-right: 6px;
+  font-size: 14px;
+  display: inline-block;
+}
+
 /* 弹窗关闭按钮样式增强 */
 .large-screen-theme .el-dialog__headerbtn {
   background: rgba(64, 158, 255, 0.1) !important;
@@ -2599,6 +3844,107 @@ body.large-screen-theme .audio-player-dialog.el-dialog,
 .large-screen-theme .el-overlay {
   background-color: rgba(0, 0, 0, 0.7) !important;
   backdrop-filter: blur(8px) !important;
+}
+
+/* 大屏主题下的音频播放器样式 */
+.large-screen-theme .audio-player-container {
+  background: rgba(15, 20, 25, 0.8) !important;
+  border: 1px solid rgba(0, 212, 170, 0.3) !important;
+}
+
+.large-screen-theme .audio-info {
+  background: rgba(26, 31, 46, 0.9) !important;
+  border-left: 4px solid #00d4aa !important;
+  box-shadow: 0 0 15px rgba(0, 212, 170, 0.2) !important;
+}
+
+.large-screen-theme .audio-title {
+  color: #00d4aa !important;
+  text-shadow: 0 0 8px rgba(0, 212, 170, 0.6) !important;
+}
+
+.large-screen-theme .audio-icon {
+  color: #00d4aa !important;
+}
+
+.large-screen-theme .detail-item {
+  color: #74b9ff !important;
+}
+
+.large-screen-theme .detail-icon {
+  color: #00d4aa !important;
+}
+
+.large-screen-theme .custom-audio-player {
+  background: rgba(26, 31, 46, 0.9) !important;
+  border: 1px solid rgba(0, 212, 170, 0.2) !important;
+  box-shadow: 0 0 20px rgba(0, 212, 170, 0.3) !important;
+}
+
+.large-screen-theme .control-btn {
+  background: linear-gradient(135deg, #00d4aa 0%, #74b9ff 100%) !important;
+  box-shadow: 0 0 15px rgba(0, 212, 170, 0.5) !important;
+  border: 1px solid rgba(0, 212, 170, 0.3) !important;
+}
+
+.large-screen-theme .control-btn:hover {
+  background: linear-gradient(135deg, #74b9ff 0%, #00d4aa 100%) !important;
+  box-shadow: 0 0 25px rgba(0, 212, 170, 0.8) !important;
+  transform: translateY(-3px) !important;
+}
+
+.large-screen-theme .play-btn {
+  background: linear-gradient(135deg, #00d4aa 0%, #00b894 100%) !important;
+  box-shadow: 0 0 20px rgba(0, 212, 170, 0.6) !important;
+}
+
+.large-screen-theme .play-btn:hover {
+  background: linear-gradient(135deg, #00b894 0%, #00d4aa 100%) !important;
+  box-shadow: 0 0 30px rgba(0, 212, 170, 0.9) !important;
+}
+
+.large-screen-theme .time-display {
+  color: #74b9ff !important;
+  text-shadow: 0 0 5px rgba(116, 185, 255, 0.6) !important;
+}
+
+.large-screen-theme .progress-track {
+  background: rgba(15, 20, 25, 0.8) !important;
+  border: 1px solid rgba(0, 212, 170, 0.2) !important;
+}
+
+.large-screen-theme .progress-fill {
+  background: linear-gradient(90deg, #00d4aa 0%, #74b9ff 100%) !important;
+  box-shadow: 0 0 10px rgba(0, 212, 170, 0.6) !important;
+}
+
+.large-screen-theme .progress-thumb {
+  background: #00d4aa !important;
+  box-shadow: 0 0 15px rgba(0, 212, 170, 0.8) !important;
+  border: 2px solid rgba(0, 212, 170, 0.5) !important;
+}
+
+.large-screen-theme .progress-thumb:hover {
+  box-shadow: 0 0 25px rgba(0, 212, 170, 1) !important;
+}
+
+.large-screen-theme .audio-player-container .volume-icon {
+  color: #74b9ff !important;
+}
+
+.large-screen-theme .audio-player-container .volume-track {
+  background: rgba(15, 20, 25, 0.8) !important;
+  border: 1px solid rgba(0, 212, 170, 0.2) !important;
+}
+
+.large-screen-theme .audio-player-container .volume-fill {
+  background: #00d4aa !important;
+  box-shadow: 0 0 8px rgba(0, 212, 170, 0.6) !important;
+}
+
+.large-screen-theme .audio-player-container .volume-text {
+  color: #74b9ff !important;
+  text-shadow: 0 0 5px rgba(116, 185, 255, 0.6) !important;
 }
 
 /* 全局强制弹窗样式 - 最高优先级 */
@@ -2925,40 +4271,40 @@ html body.large-screen-theme .el-overlay .el-dialog .el-dialog__body {
     flex-direction: column;
     gap: 16px;
   }
-  
+
   .status-stats {
     flex-direction: column;
     gap: 12px;
   }
-  
+
   .recording-item {
     flex-direction: column;
     align-items: flex-start;
     gap: 12px;
   }
-  
+
   .recording-actions {
     width: 100%;
     justify-content: flex-end;
   }
-  
+
   /* 窄屏幕下穿梭框切换为垂直布局 */
   .horizontal-transfer {
     flex-direction: column;
   }
-  
+
   :deep(.horizontal-transfer .el-transfer-panel) {
     width: 100%;
     margin-bottom: 10px;
   }
-  
+
   :deep(.horizontal-transfer .el-transfer__buttons) {
     display: flex;
     flex-direction: row;
     width: 100%;
     padding: 10px 0;
   }
-  
+
   :deep(.horizontal-transfer .el-transfer__buttons .el-button) {
     margin: 0 5px;
   }
@@ -3342,7 +4688,441 @@ html body.large-screen-theme .el-overlay .el-dialog .el-dialog__body {
     min-height: 400px;
   }
 }
+
+/* 说话人标识增强样式 */
+.speaking-device {
+  animation: speaking-pulse 1.5s ease-in-out infinite;
+  border: 2px solid #f56c6c !important;
+  box-shadow: 0 0 10px rgba(245, 108, 108, 0.5);
+}
+
+.speaking-icon {
+  color: #f56c6c;
+  animation: speaking-bounce 0.8s ease-in-out infinite;
+}
+
+.speaking-icon-table {
+  color: #f56c6c;
+  animation: speaking-bounce 0.8s ease-in-out infinite;
+  margin-right: 8px;
+}
+
+.speaking-badge {
+  background: #f56c6c;
+  color: white;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 12px;
+  margin-left: 8px;
+  animation: speaking-glow 2s ease-in-out infinite;
+}
+
+.speaking-tag {
+  animation: speaking-glow 2s ease-in-out infinite;
+}
+
+.speaking-text {
+  color: #f56c6c;
+  font-weight: bold;
+}
+
+.device-name-cell {
+  display: flex;
+  align-items: center;
+}
+
+.status-cell {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* 说话人动画效果 */
+@keyframes speaking-pulse {
+  0% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.02);
+    opacity: 0.9;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes speaking-bounce {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-2px);
+  }
+}
+
+@keyframes speaking-glow {
+  0%, 100% {
+    box-shadow: 0 0 5px rgba(245, 108, 108, 0.5);
+  }
+  50% {
+    box-shadow: 0 0 15px rgba(245, 108, 108, 0.8);
+  }
+}
+
+/* 大屏主题下的说话人标识样式 */
+.large-screen-theme .speaking-device {
+  border: 2px solid #74b9ff !important;
+  box-shadow: 0 0 20px rgba(116, 185, 255, 0.6) !important;
+  animation: large-speaking-pulse 1.5s ease-in-out infinite;
+}
+
+.large-screen-theme .speaking-icon,
+.large-screen-theme .speaking-icon-table {
+  color: #74b9ff !important;
+  text-shadow: 0 0 10px rgba(116, 185, 255, 0.8) !important;
+}
+
+.large-screen-theme .speaking-badge {
+  background: #74b9ff !important;
+  box-shadow: 0 0 10px rgba(116, 185, 255, 0.6) !important;
+}
+
+.large-screen-theme .speaking-tag {
+  background: #74b9ff !important;
+  border-color: #74b9ff !important;
+  box-shadow: 0 0 10px rgba(116, 185, 255, 0.6) !important;
+}
+
+.large-screen-theme .speaking-text {
+  color: #74b9ff !important;
+  text-shadow: 0 0 8px rgba(116, 185, 255, 0.6) !important;
+}
+
+@keyframes large-speaking-pulse {
+  0% {
+    transform: scale(1);
+    box-shadow: 0 0 20px rgba(116, 185, 255, 0.6);
+  }
+  50% {
+    transform: scale(1.02);
+    box-shadow: 0 0 30px rgba(116, 185, 255, 0.8);
+  }
+  100% {
+    transform: scale(1);
+    box-shadow: 0 0 20px rgba(116, 185, 255, 0.6);
+  }
+}
+
+/* 音量控制单元格样式 */
+.volume-control-cell {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  position: relative;
+}
+
+/* 静音状态的滑块样式 */
+.muted-slider {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+.muted-slider :deep(.el-slider__runway) {
+  background-color: #f5f7fa !important;
+  border: 1px dashed #dcdfe6 !important;
+}
+
+.muted-slider :deep(.el-slider__bar) {
+  background-color: #c0c4cc !important;
+}
+
+.muted-slider :deep(.el-slider__button) {
+  border-color: #c0c4cc !important;
+  background-color: #f5f7fa !important;
+}
+
+/* 静音指示器 */
+.muted-indicator {
+  font-size: 16px;
+  color: #f56c6c;
+  animation: muted-blink 2s ease-in-out infinite;
+}
+
+@keyframes muted-blink {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+/* 大屏主题下的静音样式 */
+.large-screen-theme .muted-slider :deep(.el-slider__runway) {
+  background-color: rgba(255, 255, 255, 0.1) !important;
+  border: 1px dashed rgba(116, 185, 255, 0.3) !important;
+}
+
+.large-screen-theme .muted-slider :deep(.el-slider__bar) {
+  background-color: rgba(116, 185, 255, 0.3) !important;
+}
+
+.large-screen-theme .muted-slider :deep(.el-slider__button) {
+  border-color: rgba(116, 185, 255, 0.3) !important;
+  background-color: rgba(26, 31, 46, 0.8) !important;
+}
+
+.large-screen-theme .muted-indicator {
+  color: #74b9ff;
+  text-shadow: 0 0 10px rgba(116, 185, 255, 0.8);
+}
+
+/* 静音按钮增强样式 */
+.el-button--warning {
+  background-color: #e6a23c;
+  border-color: #e6a23c;
+}
+
+.el-button--warning:hover {
+  background-color: #ebb563;
+  border-color: #ebb563;
+}
+
+/* 大屏主题下的静音按钮 */
+.large-screen-theme .el-button--warning {
+  background-color: #f39c12 !important;
+  border-color: #f39c12 !important;
+  box-shadow: 0 0 10px rgba(243, 156, 18, 0.5) !important;
+}
+
+.large-screen-theme .el-button--warning:hover {
+  background-color: #f1c40f !important;
+  border-color: #f1c40f !important;
+  box-shadow: 0 0 15px rgba(241, 196, 15, 0.7) !important;
+}
+
+/* 大屏主题下的调度台静音按钮 */
+.large-screen-theme .dispatcher-mute-control .el-button--warning {
+  background-color: #f39c12 !important;
+  border-color: #f39c12 !important;
+  box-shadow: 0 0 10px rgba(243, 156, 18, 0.5) !important;
+}
+
+.large-screen-theme .dispatcher-mute-control .el-button--warning:hover {
+  background-color: #f1c40f !important;
+  border-color: #f1c40f !important;
+  box-shadow: 0 0 15px rgba(241, 196, 15, 0.7) !important;
+}
+
+/* 大屏主题下的通话记录滚动容器样式 */
+.large-screen-theme .call-records-container {
+  border: 1px solid rgba(64, 158, 255, 0.2) !important;
+  background: rgba(15, 20, 25, 0.3) !important;
+  border-radius: 6px;
+  /* 大屏主题下使用更大的高度 */
+  height: calc(100vh - 300px) !important;
+  min-height: 600px !important;
+  max-height: 1200px !important;
+}
+
+/* 大屏主题下的自定义滚动条样式 */
+.large-screen-theme .call-records-container::-webkit-scrollbar {
+  width: 8px !important;
+}
+
+.large-screen-theme .call-records-container::-webkit-scrollbar-track {
+  background: rgba(15, 20, 25, 0.5) !important;
+  border-radius: 4px !important;
+}
+
+.large-screen-theme .call-records-container::-webkit-scrollbar-thumb {
+  background: linear-gradient(135deg, rgba(64, 158, 255, 0.6) 0%, rgba(64, 158, 255, 0.4) 100%) !important;
+  border-radius: 4px !important;
+  box-shadow: 0 0 10px rgba(64, 158, 255, 0.3) !important;
+}
+
+.large-screen-theme .call-records-container::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(135deg, rgba(64, 158, 255, 0.8) 0%, rgba(64, 158, 255, 0.6) 100%) !important;
+  box-shadow: 0 0 15px rgba(64, 158, 255, 0.5) !important;
+}
+
+/* 大屏主题下的响应式高度调整 */
+@media (max-height: 768px) {
+  .large-screen-theme .call-records-container {
+    height: calc(100vh - 260px) !important;
+    min-height: 400px !important;
+  }
+}
+
+@media (min-height: 1080px) {
+  .large-screen-theme .call-records-container {
+    height: calc(100vh - 320px) !important;
+    max-height: 1000px !important;
+  }
+}
+
+@media (min-height: 1440px) {
+  .large-screen-theme .call-records-container {
+    height: calc(100vh - 380px) !important;
+    max-height: 1200px !important;
+  }
+}
+
+@media (min-height: 1800px) {
+  .large-screen-theme .call-records-container {
+    height: calc(100vh - 450px) !important;
+    max-height: 1400px !important;
+  }
+}
+
+/* 大屏主题下的通话记录时间线样式 */
+.large-screen-theme .call-records-timeline::before {
+  background: rgba(116, 185, 255, 0.4) !important;
+  box-shadow: 0 0 10px rgba(116, 185, 255, 0.3) !important;
+}
+
+.large-screen-theme .timeline-item::before {
+  background: #74b9ff !important;
+  box-shadow: 0 0 15px rgba(116, 185, 255, 0.8) !important;
+}
+
+.large-screen-theme .timeline-item.success::before {
+  background: #00d4aa !important;
+  box-shadow: 0 0 15px rgba(0, 212, 170, 0.8) !important;
+}
+
+.large-screen-theme .timeline-item.warning::before {
+  background: #ffc107 !important;
+  box-shadow: 0 0 15px rgba(255, 193, 7, 0.8) !important;
+}
+
+.large-screen-theme .timeline-item.danger::before {
+  background: #ff6b6b !important;
+  box-shadow: 0 0 15px rgba(255, 107, 107, 0.8) !important;
+}
+
+.large-screen-theme .timeline-item.emergency::before {
+  background: #ff4757 !important;
+  box-shadow: 0 0 20px rgba(255, 71, 87, 0.9) !important;
+  animation: emergency-timeline-pulse-large 2s infinite !important;
+}
+
+@keyframes emergency-timeline-pulse-large {
+  0%, 100% {
+    background: #ff4757 !important;
+    box-shadow: 0 0 20px rgba(255, 71, 87, 0.9) !important;
+  }
+  50% {
+    background: #ff6b6b !important;
+    box-shadow: 0 0 30px rgba(255, 71, 87, 1) !important;
+  }
+}
+
+.large-screen-theme .timeline-item .timestamp {
+  color: rgba(232, 244, 253, 0.7) !important;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5) !important;
+}
+
+.large-screen-theme .call-record {
+  background: rgba(26, 31, 46, 0.8) !important;
+  border: 1px solid rgba(64, 158, 255, 0.3) !important;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3) !important;
+}
+
+.large-screen-theme .call-record.emergency-call {
+  background: rgba(45, 20, 20, 0.9) !important;
+  border: 2px solid rgba(255, 71, 87, 0.8) !important;
+  box-shadow: 0 6px 25px rgba(255, 71, 87, 0.4),
+              0 0 20px rgba(255, 71, 87, 0.3) !important;
+  animation: emergency-card-glow 3s ease-in-out infinite !important;
+}
+
+.large-screen-theme .call-record.emergency-call h4 {
+  color: #ff6b6b !important;
+  font-weight: bold !important;
+  text-shadow: 0 0 10px rgba(255, 107, 107, 0.8) !important;
+}
+
+.large-screen-theme .call-record.emergency-call p {
+  color: rgba(255, 255, 255, 0.9) !important;
+}
+
+.large-screen-theme .emergency-type-label {
+  color: #ff6b6b !important;
+  font-weight: bold !important;
+  text-shadow: 0 0 10px rgba(255, 107, 107, 0.8) !important;
+}
+
+.large-screen-theme .emergency-indicator {
+  filter: drop-shadow(0 0 8px rgba(255, 107, 107, 0.8)) !important;
+  animation: emergency-blink-large 1.5s infinite !important;
+}
+
+@keyframes emergency-blink-large {
+  0%, 50% {
+    opacity: 1;
+    filter: drop-shadow(0 0 8px rgba(255, 107, 107, 0.8));
+  }
+  51%, 100% {
+    opacity: 0.4;
+    filter: drop-shadow(0 0 4px rgba(255, 107, 107, 0.4));
+  }
+}
+
+@keyframes emergency-card-glow {
+  0%, 100% {
+    box-shadow: 0 6px 25px rgba(255, 71, 87, 0.4),
+                0 0 20px rgba(255, 71, 87, 0.3);
+  }
+  50% {
+    box-shadow: 0 8px 35px rgba(255, 71, 87, 0.6),
+                0 0 30px rgba(255, 71, 87, 0.5);
+  }
+}
+
+.large-screen-theme .call-record.dispatch-center {
+  border-left-color: #00d4aa !important;
+  background: rgba(0, 212, 170, 0.1) !important;
+  box-shadow: 0 4px 15px rgba(0, 212, 170, 0.2) !important;
+}
+
+.large-screen-theme .call-record.device {
+  border-left-color: #ffc107 !important;
+  background: rgba(255, 193, 7, 0.1) !important;
+  box-shadow: 0 4px 15px rgba(255, 193, 7, 0.2) !important;
+}
+
+.large-screen-theme .call-record h4 {
+  color: #e8f4fd !important;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5) !important;
+}
+
+.large-screen-theme .call-record p {
+  color: rgba(232, 244, 253, 0.8) !important;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3) !important;
+}
+
+.large-screen-theme .caller-badge.dispatch-center {
+  background: linear-gradient(135deg, #00d4aa 0%, #00b894 100%) !important;
+  color: #ffffff !important;
+  box-shadow: 0 2px 8px rgba(0, 212, 170, 0.4) !important;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3) !important;
+}
+
+.large-screen-theme .caller-badge.device {
+  background: linear-gradient(135deg, #ffc107 0%, #f39c12 100%) !important;
+  color: #ffffff !important;
+  box-shadow: 0 2px 8px rgba(255, 193, 7, 0.4) !important;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3) !important;
+}
+
+.large-screen-theme .call-record .recording-info {
+  background: rgba(64, 158, 255, 0.15) !important;
+  border-left-color: #74b9ff !important;
+  box-shadow: 0 2px 8px rgba(64, 158, 255, 0.2) !important;
+}
 </style>
 
 
- 

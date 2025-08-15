@@ -43,9 +43,13 @@
           <span>调度管理</span>
         </template>
         <el-menu-item index="/dispatch/audio">音频调度</el-menu-item>
+        <el-menu-item index="/dispatch/call-records">通话记录</el-menu-item>
         <el-menu-item index="/dispatch/video">视频调度</el-menu-item>
         <el-menu-item index="/dispatch/recordings">视频录像</el-menu-item>
         <el-menu-item index="/dispatch/conference">视频会商</el-menu-item>
+        <el-menu-item index="/dispatch/meeting-records">会商记录</el-menu-item>
+        <el-menu-item index="/dispatch/location-dispatch">位置调度</el-menu-item>
+        <el-menu-item index="/dispatch/device-tracks">设备轨迹</el-menu-item>
       </el-sub-menu>
       
       <el-sub-menu index="/system">

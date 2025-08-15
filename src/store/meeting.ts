@@ -24,8 +24,14 @@ export interface Meeting {
   members: MeetingMember[];
   startTime: string;
   endTime?: string;
-  duration?: string;
+  duration?: number;
   muted: boolean;
+  hasRecording?: boolean;
+  recordingUrl?: string;
+  fileSize?: number;
+  resolution?: string;
+  frameRate?: string;
+  codec?: string;
 }
 
 // 邀请状态
@@ -60,13 +66,82 @@ export const useMeetingStore = defineStore('meeting', () => {
       host: '王五',
       hostId: 'u3',
       status: '已结束',
-      members: [ 
-        { id: 'u3', name: '王五', status: 'online' }, 
-        { id: 'u4', name: '赵六', status: 'offline' } 
+      members: [
+        { id: 'u3', name: '王五', status: 'online' },
+        { id: 'u4', name: '赵六', status: 'offline' }
       ],
-      startTime: '2023-07-16 15:00',
-      endTime: '2023-07-16 16:30',
-      muted: true
+      startTime: '2024-01-16 15:00',
+      endTime: '2024-01-16 16:30',
+      duration: 90,
+      muted: true,
+      hasRecording: true,
+      recordingUrl: 'https://sample-videos.com/zip/10/mp4/SampleVideo_1280x720_1mb.mp4',
+      fileSize: 1048576,
+      resolution: '1920x1080',
+      frameRate: '30fps',
+      codec: 'H.264'
+    },
+    {
+      id: 'm3',
+      topic: '紧急事故处置会议',
+      host: '张三',
+      hostId: 'u1',
+      status: '已结束',
+      members: [
+        { id: 'u1', name: '张三', status: 'online' },
+        { id: 'u2', name: '李四', status: 'online' },
+        { id: 'u5', name: '陈七', status: 'online' }
+      ],
+      startTime: '2024-01-15 09:30',
+      endTime: '2024-01-15 11:15',
+      duration: 105,
+      muted: false,
+      hasRecording: true,
+      recordingUrl: 'https://sample-videos.com/zip/10/mp4/SampleVideo_1280x720_2mb.mp4',
+      fileSize: 2097152,
+      resolution: '1920x1080',
+      frameRate: '30fps',
+      codec: 'H.264'
+    },
+    {
+      id: 'm4',
+      topic: '月度工作总结会',
+      host: '李四',
+      hostId: 'u2',
+      status: '已结束',
+      members: [
+        { id: 'u2', name: '李四', status: 'online' },
+        { id: 'u3', name: '王五', status: 'online' },
+        { id: 'u4', name: '赵六', status: 'online' },
+        { id: 'u6', name: '孙八', status: 'online' }
+      ],
+      startTime: '2024-01-14 14:00',
+      endTime: '2024-01-14 15:45',
+      duration: 105,
+      muted: false,
+      hasRecording: false
+    },
+    {
+      id: 'm5',
+      topic: '设备维护协调会',
+      host: '陈七',
+      hostId: 'u5',
+      status: '已结束',
+      members: [
+        { id: 'u5', name: '陈七', status: 'online' },
+        { id: 'u1', name: '张三', status: 'online' },
+        { id: 'u3', name: '王五', status: 'online' }
+      ],
+      startTime: '2024-01-13 10:00',
+      endTime: '2024-01-13 11:30',
+      duration: 90,
+      muted: false,
+      hasRecording: true,
+      recordingUrl: 'https://sample-videos.com/zip/10/mp4/SampleVideo_1280x720_1mb.mp4',
+      fileSize: 1572864,
+      resolution: '1280x720',
+      frameRate: '25fps',
+      codec: 'H.264'
     }
   ]);
 

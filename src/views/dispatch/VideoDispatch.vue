@@ -12,10 +12,10 @@
                 <el-input v-model="deviceSearch" placeholder="搜索设备" clearable :prefix-icon="Search" />
               </div>
               <div class="device-filter">
-                <el-radio-group v-model="statusFilter">
-                  <el-radio-button label="all" class="large-screen-button">全部</el-radio-button>
-                  <el-radio-button label="online" class="large-screen-button">在线</el-radio-button>
-                  <el-radio-button label="offline" class="large-screen-button">离线</el-radio-button>
+                <el-radio-group v-model="statusFilter" class="device-filter-group">
+                  <el-radio-button label="all">全部</el-radio-button>
+                  <el-radio-button label="online">在线</el-radio-button>
+                  <el-radio-button label="offline">离线</el-radio-button>
                 </el-radio-group>
               </div>
             </div>
@@ -168,10 +168,10 @@
               <div class="video-toolbar">
                 <el-form :inline="true" :model="searchForm" class="video-search-form">
                   <el-form-item label="视图布局" class="large-screen-text-primary">
-                    <el-radio-group v-model="viewMode">
-                      <el-radio-button label="1" class="large-screen-button">单画面</el-radio-button>
-                      <el-radio-button label="4" class="large-screen-button">四画面</el-radio-button>
-                      <el-radio-button label="9" class="large-screen-button">九画面</el-radio-button>
+                    <el-radio-group v-model="viewMode" class="view-mode-group">
+                      <el-radio-button label="1">单画面</el-radio-button>
+                      <el-radio-button label="4">四画面</el-radio-button>
+                      <el-radio-button label="9">九画面</el-radio-button>
                     </el-radio-group>
                   </el-form-item>
                 </el-form>
@@ -1148,4 +1148,165 @@ onMounted(() => {
     height: calc(50% - 16px); /* 相应调整云台控制高度 */
   }
 }
-</style> 
+
+/* 视频调度模块按钮悬浮效果优化 */
+/* 设备过滤按钮组样式 */
+.device-filter-group {
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  background: #ffffff;
+}
+
+.device-filter-group :deep(.el-radio-button) {
+  margin: 0;
+  border: none;
+}
+
+.device-filter-group :deep(.el-radio-button__inner) {
+  border: none;
+  border-radius: 0;
+  background: #ffffff;
+  color: #606266;
+  padding: 12px 20px;
+  font-weight: 500;
+  font-size: 14px;
+  transition: all 0.25s ease;
+  position: relative;
+  min-width: 60px;
+  text-align: center;
+}
+
+/* 未激活状态的悬浮效果 */
+.device-filter-group :deep(.el-radio-button:not(.is-active) .el-radio-button__inner):hover {
+  background: linear-gradient(135deg, #f0f7ff 0%, #e6f1fc 100%);
+  color: #409EFF;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(64, 158, 255, 0.2);
+}
+
+/* 激活状态样式 */
+.device-filter-group :deep(.el-radio-button.is-active .el-radio-button__inner) {
+  background: linear-gradient(135deg, #409EFF 0%, #5dade2 100%);
+  color: #ffffff;
+  font-weight: 600;
+  box-shadow: 0 4px 12px rgba(64, 158, 255, 0.3);
+  transform: translateY(-1px);
+}
+
+/* 激活状态的悬浮效果 */
+.device-filter-group :deep(.el-radio-button.is-active .el-radio-button__inner):hover {
+  background: linear-gradient(135deg, #337ecc 0%, #4a90d9 100%);
+  transform: translateY(-3px);
+  box-shadow: 0 6px 16px rgba(64, 158, 255, 0.4);
+}
+
+/* 按钮间分隔线 */
+.device-filter-group :deep(.el-radio-button:not(:last-child) .el-radio-button__inner)::after {
+  content: '';
+  position: absolute;
+  right: 0;
+  top: 25%;
+  bottom: 25%;
+  width: 1px;
+  background: rgba(0, 0, 0, 0.08);
+  transition: opacity 0.25s ease;
+}
+
+.device-filter-group :deep(.el-radio-button:hover .el-radio-button__inner)::after,
+.device-filter-group :deep(.el-radio-button.is-active .el-radio-button__inner)::after {
+  opacity: 0;
+}
+
+/* 视图模式按钮组样式 */
+.view-mode-group {
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  background: #ffffff;
+}
+
+.view-mode-group :deep(.el-radio-button) {
+  margin: 0;
+  border: none;
+}
+
+.view-mode-group :deep(.el-radio-button__inner) {
+  border: none;
+  border-radius: 0;
+  background: #ffffff;
+  color: #606266;
+  padding: 12px 18px;
+  font-weight: 500;
+  font-size: 14px;
+  transition: all 0.25s ease;
+  position: relative;
+  min-width: 70px;
+  text-align: center;
+}
+
+/* 未激活状态的悬浮效果 */
+.view-mode-group :deep(.el-radio-button:not(.is-active) .el-radio-button__inner):hover {
+  background: linear-gradient(135deg, #f0f7ff 0%, #e6f1fc 100%);
+  color: #409EFF;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(64, 158, 255, 0.2);
+}
+
+/* 激活状态样式 */
+.view-mode-group :deep(.el-radio-button.is-active .el-radio-button__inner) {
+  background: linear-gradient(135deg, #409EFF 0%, #5dade2 100%);
+  color: #ffffff;
+  font-weight: 600;
+  box-shadow: 0 4px 12px rgba(64, 158, 255, 0.3);
+  transform: translateY(-1px);
+}
+
+/* 激活状态的悬浮效果 */
+.view-mode-group :deep(.el-radio-button.is-active .el-radio-button__inner):hover {
+  background: linear-gradient(135deg, #337ecc 0%, #4a90d9 100%);
+  transform: translateY(-3px);
+  box-shadow: 0 6px 16px rgba(64, 158, 255, 0.4);
+}
+
+/* 按钮间分隔线 */
+.view-mode-group :deep(.el-radio-button:not(:last-child) .el-radio-button__inner)::after {
+  content: '';
+  position: absolute;
+  right: 0;
+  top: 25%;
+  bottom: 25%;
+  width: 1px;
+  background: rgba(0, 0, 0, 0.08);
+  transition: opacity 0.25s ease;
+}
+
+.view-mode-group :deep(.el-radio-button:hover .el-radio-button__inner)::after,
+.view-mode-group :deep(.el-radio-button.is-active .el-radio-button__inner)::after {
+  opacity: 0;
+}
+
+/* 按钮组整体悬浮效果 */
+.device-filter:hover .device-filter-group,
+.video-toolbar:hover .view-mode-group {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+  transform: translateY(-1px);
+}
+
+/* 点击效果 */
+.device-filter-group :deep(.el-radio-button__inner):active,
+.view-mode-group :deep(.el-radio-button__inner):active {
+  transform: translateY(0) !important;
+  transition: transform 0.1s ease;
+}
+
+/* 响应式优化 */
+@media (max-width: 1200px) {
+  .device-filter-group :deep(.el-radio-button__inner),
+  .view-mode-group :deep(.el-radio-button__inner) {
+    padding: 10px 16px;
+    font-size: 13px;
+    min-width: 50px;
+  }
+}
+</style>

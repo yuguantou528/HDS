@@ -101,12 +101,12 @@
 
 <script setup lang="ts">
 import { ref } from 'vue';
-import { 
-  Headset, 
-  VideoCamera, 
-  VideoPlay, 
+import {
+  Headset,
+  VideoCamera,
+  VideoPlay,
   ChatDotRound,
-  Monitor 
+  Monitor
 } from '@element-plus/icons-vue';
 
 // 导入各个功能模块组件

@@ -96,6 +96,16 @@ const routes: Array<RouteRecordRaw> = [
     }
   },
   {
+    path: '/dispatch/call-records',
+    name: 'CallRecords',
+    component: () => import('@/views/dispatch/CallRecords.vue'),
+    meta: {
+      title: '通话记录',
+      requiresAuth: true,
+      requiresLayout: true
+    }
+  },
+  {
     path: '/dispatch/video',
     name: 'VideoDispatch',
     component: () => import('@/views/dispatch/VideoDispatch.vue'),
@@ -121,6 +131,36 @@ const routes: Array<RouteRecordRaw> = [
     component: () => import('@/views/dispatch/VideoConference.vue'),
     meta: {
       title: '视频会商',
+      requiresAuth: true,
+      requiresLayout: true
+    }
+  },
+  {
+    path: '/dispatch/meeting-records',
+    name: 'MeetingRecords',
+    component: () => import('@/views/dispatch/MeetingRecords.vue'),
+    meta: {
+      title: '会商记录',
+      requiresAuth: true,
+      requiresLayout: true
+    }
+  },
+  {
+    path: '/dispatch/location-dispatch',
+    name: 'LocationDispatch',
+    component: () => import('@/views/dispatch/LocationDispatch.vue'),
+    meta: {
+      title: '位置调度',
+      requiresAuth: true,
+      requiresLayout: true
+    }
+  },
+  {
+    path: '/dispatch/device-tracks',
+    name: 'DeviceTracks',
+    component: () => import('@/views/dispatch/DeviceTracks.vue'),
+    meta: {
+      title: '设备轨迹',
       requiresAuth: true,
       requiresLayout: true
     }

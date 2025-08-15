@@ -1,0 +1,818 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>录音播放弹窗测试</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Microsoft YaHei', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .test-container {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            max-width: 600px;
+            width: 100%;
+        }
+
+        .test-title {
+            font-size: 28px;
+            color: #333;
+            margin-bottom: 20px;
+            font-weight: 600;
+        }
+
+        .test-description {
+            color: #666;
+            margin-bottom: 30px;
+            line-height: 1.6;
+        }
+
+        .theme-buttons {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            margin-bottom: 30px;
+        }
+
+        .theme-btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .theme-btn.normal {
+            background: #409eff;
+            color: white;
+        }
+
+        .theme-btn.large {
+            background: #00d4aa;
+            color: white;
+        }
+
+        .theme-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+        }
+
+        .demo-button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 8px;
+            font-size: 18px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin: 10px;
+        }
+
+        .demo-button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.4);
+        }
+
+        /* 弹窗遮罩 */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            backdrop-filter: blur(5px);
+        }
+
+        .modal-overlay.show {
+            display: flex;
+        }
+
+        /* 弹窗容器 */
+        .audio-dialog {
+            background: white;
+            border-radius: 12px;
+            width: 500px;
+            max-width: 90vw;
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+            transform: scale(0.8);
+            transition: all 0.3s ease;
+        }
+
+        .modal-overlay.show .audio-dialog {
+            transform: scale(1);
+        }
+
+        /* 弹窗头部 */
+        .dialog-header {
+            background: #409eff;
+            color: white;
+            padding: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .dialog-title {
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+        .close-btn {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 24px;
+            cursor: pointer;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            transition: all 0.3s ease;
+        }
+
+        .close-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        /* 弹窗内容 */
+        .dialog-body {
+            padding: 0;
+        }
+
+        /* 音频播放器容器样式 */
+        .audio-player-container {
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+
+        /* 录音信息区域 */
+        .audio-info {
+            margin-bottom: 20px;
+            padding: 15px;
+            background: #fff;
+            border-radius: 6px;
+            border-left: 4px solid #409eff;
+        }
+
+        .audio-title {
+            display: flex;
+            align-items: center;
+            font-size: 16px;
+            font-weight: 600;
+            color: #303133;
+            margin-bottom: 10px;
+        }
+
+        .audio-title i {
+            margin-right: 8px;
+            color: #409eff;
+            font-size: 18px;
+        }
+
+        .audio-details {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .detail-item {
+            display: flex;
+            align-items: center;
+            font-size: 14px;
+            color: #606266;
+        }
+
+        .detail-item i {
+            margin-right: 6px;
+            color: #909399;
+            width: 14px;
+        }
+
+        /* 自定义音频播放器 */
+        .custom-audio-player {
+            background: #fff;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        /* 播放控制按钮 */
+        .player-controls {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .control-btn {
+            width: 45px;
+            height: 45px;
+            border: none;
+            border-radius: 50%;
+            background: #409eff;
+            color: white;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 8px rgba(64, 158, 255, 0.3);
+        }
+
+        .control-btn:hover {
+            background: #337ecc;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(64, 158, 255, 0.4);
+        }
+
+        .play-btn {
+            width: 55px;
+            height: 55px;
+            font-size: 22px;
+            background: #67c23a;
+            box-shadow: 0 2px 8px rgba(103, 194, 58, 0.3);
+        }
+
+        .play-btn:hover {
+            background: #529b2e;
+            box-shadow: 0 4px 12px rgba(103, 194, 58, 0.4);
+        }
+
+        /* 进度条区域 */
+        .progress-area {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 15px;
+        }
+
+        .time-display {
+            font-size: 14px;
+            color: #606266;
+            font-family: 'Courier New', monospace;
+            min-width: 45px;
+        }
+
+        .progress-bar {
+            flex: 1;
+            height: 6px;
+            position: relative;
+        }
+
+        .progress-track {
+            width: 100%;
+            height: 100%;
+            background: #e4e7ed;
+            border-radius: 3px;
+            position: relative;
+            cursor: pointer;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #409eff 0%, #67c23a 100%);
+            border-radius: 3px;
+            transition: width 0.3s ease;
+        }
+
+        .progress-thumb {
+            position: absolute;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            width: 14px;
+            height: 14px;
+            background: #409eff;
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: 0 2px 6px rgba(64, 158, 255, 0.4);
+            transition: all 0.3s ease;
+        }
+
+        .progress-thumb:hover {
+            transform: translate(-50%, -50%) scale(1.2);
+            box-shadow: 0 3px 8px rgba(64, 158, 255, 0.6);
+        }
+
+        /* 音量控制 */
+        .volume-control {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .volume-control i {
+            color: #909399;
+            font-size: 16px;
+        }
+
+        .volume-bar {
+            flex: 1;
+            height: 4px;
+            max-width: 100px;
+        }
+
+        .volume-track {
+            width: 100%;
+            height: 100%;
+            background: #e4e7ed;
+            border-radius: 2px;
+            position: relative;
+            cursor: pointer;
+        }
+
+        .volume-fill {
+            height: 100%;
+            background: #409eff;
+            border-radius: 2px;
+            transition: width 0.3s ease;
+        }
+
+        .volume-text {
+            font-size: 12px;
+            color: #909399;
+            min-width: 30px;
+        }
+
+        /* 操作按钮区域 */
+        .audio-actions {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .action-btn {
+            padding: 8px 16px;
+            border: 1px solid #dcdfe6;
+            border-radius: 4px;
+            background: white;
+            color: #606266;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s ease;
+        }
+
+        .action-btn.primary {
+            background: #409eff;
+            color: white;
+            border-color: #409eff;
+        }
+
+        .action-btn:hover {
+            border-color: #409eff;
+            color: #409eff;
+        }
+
+        .action-btn.primary:hover {
+            background: #337ecc;
+            border-color: #337ecc;
+        }
+
+        /* 大屏主题样式 */
+        body.large-screen-theme {
+            background: linear-gradient(135deg, #0f1419 0%, #1a1f2e 100%);
+        }
+
+        .large-screen-theme .test-container {
+            background: rgba(26, 31, 46, 0.95);
+            border: 2px solid rgba(0, 212, 170, 0.5);
+            box-shadow: 0 0 30px rgba(0, 212, 170, 0.3);
+            color: #74b9ff;
+        }
+
+        .large-screen-theme .test-title {
+            color: #00d4aa;
+            text-shadow: 0 0 15px rgba(0, 212, 170, 0.8);
+        }
+
+        .large-screen-theme .test-description {
+            color: #74b9ff;
+        }
+
+        .large-screen-theme .audio-dialog {
+            background: linear-gradient(135deg, rgba(15, 20, 25, 0.98) 0%, rgba(26, 31, 46, 0.98) 100%);
+            border: 3px solid rgba(0, 212, 170, 0.9);
+            box-shadow: 0 25px 80px rgba(0, 0, 0, 0.9), 0 0 50px rgba(0, 212, 170, 0.5);
+        }
+
+        .large-screen-theme .dialog-header {
+            background: linear-gradient(90deg, rgba(0, 212, 170, 0.3) 0%, rgba(0, 212, 170, 0.1) 100%);
+            border-bottom: 2px solid rgba(0, 212, 170, 0.6);
+        }
+
+        .large-screen-theme .dialog-title {
+            color: #00d4aa;
+            text-shadow: 0 0 15px rgba(0, 212, 170, 0.8);
+        }
+
+        .large-screen-theme .audio-player-container {
+            background: rgba(15, 20, 25, 0.8);
+            border: 1px solid rgba(0, 212, 170, 0.3);
+        }
+
+        .large-screen-theme .audio-info {
+            background: rgba(26, 31, 46, 0.9);
+            border-left: 4px solid #00d4aa;
+            box-shadow: 0 0 15px rgba(0, 212, 170, 0.2);
+        }
+
+        .large-screen-theme .audio-title {
+            color: #00d4aa;
+            text-shadow: 0 0 8px rgba(0, 212, 170, 0.6);
+        }
+
+        .large-screen-theme .detail-item {
+            color: #74b9ff;
+        }
+
+        .large-screen-theme .custom-audio-player {
+            background: rgba(26, 31, 46, 0.9);
+            border: 1px solid rgba(0, 212, 170, 0.2);
+            box-shadow: 0 0 20px rgba(0, 212, 170, 0.3);
+        }
+
+        .large-screen-theme .control-btn {
+            background: linear-gradient(135deg, #00d4aa 0%, #74b9ff 100%);
+            box-shadow: 0 0 15px rgba(0, 212, 170, 0.5);
+            border: 1px solid rgba(0, 212, 170, 0.3);
+        }
+
+        .large-screen-theme .control-btn:hover {
+            background: linear-gradient(135deg, #74b9ff 0%, #00d4aa 100%);
+            box-shadow: 0 0 25px rgba(0, 212, 170, 0.8);
+            transform: translateY(-3px);
+        }
+
+        .large-screen-theme .play-btn {
+            background: linear-gradient(135deg, #00d4aa 0%, #00b894 100%);
+            box-shadow: 0 0 20px rgba(0, 212, 170, 0.6);
+        }
+
+        .large-screen-theme .play-btn:hover {
+            background: linear-gradient(135deg, #00b894 0%, #00d4aa 100%);
+            box-shadow: 0 0 30px rgba(0, 212, 170, 0.9);
+        }
+
+        /* 大屏：提升对比度与可读性 */
+        .large-screen-theme .time-display {
+            color: #ffffff;
+            font-weight: 700;
+            text-shadow: 0 0 8px rgba(255, 255, 255, 0.85), 0 0 12px rgba(0, 212, 170, 0.6);
+        }
+
+        .large-screen-theme .progress-bar { height: 12px; }
+
+        .large-screen-theme .progress-track {
+            background: rgba(255, 255, 255, 0.12);
+            border: 1px solid rgba(255, 255, 255, 0.45);
+            box-shadow: 0 0 12px rgba(255, 255, 255, 0.15) inset, 0 0 10px rgba(0, 212, 170, 0.25);
+        }
+
+        .large-screen-theme .progress-fill {
+            background: linear-gradient(90deg, #ffd166 0%, #06d6a0 100%);
+            box-shadow: 0 0 15px rgba(255, 209, 102, 0.9), 0 0 25px rgba(6, 214, 160, 0.7);
+        }
+
+        .large-screen-theme .progress-thumb {
+            width: 18px;
+            height: 18px;
+            background: #ffffff;
+            border: 3px solid #ffd166;
+            box-shadow: 0 0 15px rgba(255, 209, 102, 0.95), 0 0 25px rgba(6, 214, 160, 0.8);
+        }
+
+        .large-screen-theme .progress-thumb:hover {
+            transform: translate(-50%, -50%) scale(1.15);
+            box-shadow: 0 0 25px rgba(255, 209, 102, 1), 0 0 35px rgba(6, 214, 160, 0.95);
+        }
+
+        .large-screen-theme .volume-bar { height: 10px; max-width: 160px; }
+
+        .large-screen-theme .volume-track {
+            background: rgba(255, 255, 255, 0.12);
+            border: 1px solid rgba(255, 255, 255, 0.45);
+            box-shadow: 0 0 12px rgba(255, 255, 255, 0.12) inset, 0 0 8px rgba(6, 214, 160, 0.25);
+        }
+
+        .large-screen-theme .volume-fill {
+            background: linear-gradient(90deg, #ffd166 0%, #06d6a0 100%);
+            box-shadow: 0 0 12px rgba(255, 209, 102, 0.85);
+        }
+
+        .large-screen-theme .volume-text {
+            color: #ffffff;
+            font-weight: 700;
+            text-shadow: 0 0 8px rgba(255, 255, 255, 0.85);
+        }
+
+        .large-screen-theme .volume-control i {
+            color: #ffffff;
+            text-shadow: 0 0 8px rgba(255, 255, 255, 0.85), 0 0 12px rgba(0, 212, 170, 0.6);
+        }
+
+        .large-screen-theme .action-btn {
+            background: rgba(26, 31, 46, 0.9);
+            border: 1px solid rgba(0, 212, 170, 0.3);
+            color: #74b9ff;
+        }
+
+        .large-screen-theme .action-btn.primary {
+            background: linear-gradient(135deg, #00d4aa 0%, #74b9ff 100%);
+            border: 1px solid rgba(0, 212, 170, 0.5);
+            color: white;
+            box-shadow: 0 0 15px rgba(0, 212, 170, 0.4);
+        }
+
+        .large-screen-theme .action-btn:hover {
+            border-color: #00d4aa;
+            color: #00d4aa;
+            box-shadow: 0 0 10px rgba(0, 212, 170, 0.5);
+        }
+
+        .large-screen-theme .action-btn.primary:hover {
+            background: linear-gradient(135deg, #74b9ff 0%, #00d4aa 100%);
+            box-shadow: 0 0 25px rgba(0, 212, 170, 0.6);
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1 class="test-title">🎵 录音播放弹窗测试</h1>
+        <p class="test-description">
+            测试音频调度系统中的录音播放弹窗界面，包括常规主题和大屏主题两种样式。
+            点击下方按钮切换主题，然后点击"播放录音"按钮查看弹窗效果。
+        </p>
+        
+        <div class="theme-buttons">
+            <button class="theme-btn normal" onclick="setTheme('normal')">常规主题</button>
+            <button class="theme-btn large" onclick="setTheme('large')">大屏主题</button>
+        </div>
+        
+        <button class="demo-button" onclick="showAudioPlayer()">
+            🎵 播放录音
+        </button>
+        
+        <div style="margin-top: 20px; color: #666; font-size: 14px;">
+            当前主题：<span id="currentTheme">常规主题</span>
+        </div>
+    </div>
+
+    <!-- 录音播放弹窗 -->
+    <div class="modal-overlay" id="audioModal">
+        <div class="audio-dialog">
+            <div class="dialog-header">
+                <div class="dialog-title">录音播放</div>
+                <button class="close-btn" onclick="hideAudioPlayer()">×</button>
+            </div>
+            <div class="dialog-body">
+                <div class="audio-player-container">
+                    <!-- 录音信息 -->
+                    <div class="audio-info">
+                        <div class="audio-title">
+                            <span class="audio-icon">🎤</span>
+                            <span>通话录音文件</span>
+                        </div>
+                        <div class="audio-details">
+                            <span class="detail-item">
+                                <span class="detail-icon">🕒</span>
+                                录制时间：2024-01-15 14:30:25
+                            </span>
+                            <span class="detail-item">
+                                <span class="detail-icon">📞</span>
+                                通话时长：00:02:35
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- 自定义音频播放器 -->
+                    <div class="custom-audio-player">
+                        <!-- 播放控制区域 -->
+                        <div class="player-controls">
+                            <button class="control-btn play-btn" onclick="togglePlay()">
+                                <span class="control-icon" id="playIcon">▶</span>
+                            </button>
+                            <button class="control-btn" onclick="rewind()">
+                                <span class="control-icon">⏪</span>
+                            </button>
+                            <button class="control-btn" onclick="fastForward()">
+                                <span class="control-icon">⏩</span>
+                            </button>
+                        </div>
+
+                        <!-- 进度条区域 -->
+                        <div class="progress-area">
+                            <span class="time-display current-time" id="currentTime">00:00</span>
+                            <div class="progress-bar" onclick="seekTo(event)">
+                                <div class="progress-track">
+                                    <div class="progress-fill" id="progressFill" style="width: 35%;"></div>
+                                    <div class="progress-thumb" id="progressThumb" style="left: 35%;"></div>
+                                </div>
+                            </div>
+                            <span class="time-display total-time">02:35</span>
+                        </div>
+
+                        <!-- 音量控制 -->
+                        <div class="volume-control">
+                            <i>🔊</i>
+                            <div class="volume-bar" onclick="setVolume(event)">
+                                <div class="volume-track">
+                                    <div class="volume-fill" id="volumeFill" style="width: 70%;"></div>
+                                </div>
+                            </div>
+                            <span class="volume-text" id="volumeText">70%</span>
+                        </div>
+                    </div>
+
+                    <!-- 操作按钮 -->
+                    <div class="audio-actions">
+                        <button class="action-btn primary" onclick="downloadAudio()">
+                            📥 下载录音
+                        </button>
+                        <button class="action-btn" onclick="shareAudio()">
+                            📤 分享
+                        </button>
+                        <button class="action-btn" onclick="copyLink()">
+                            📋 复制链接
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let isPlaying = false;
+        let currentProgress = 35;
+        let currentVolume = 70;
+        let currentTime = 0;
+        let totalTime = 155; // 2:35 in seconds
+
+        function setTheme(theme) {
+            const body = document.body;
+            const currentThemeSpan = document.getElementById('currentTheme');
+            
+            if (theme === 'large') {
+                body.classList.add('large-screen-theme');
+                currentThemeSpan.textContent = '大屏主题';
+            } else {
+                body.classList.remove('large-screen-theme');
+                currentThemeSpan.textContent = '常规主题';
+            }
+        }
+
+        function showAudioPlayer() {
+            document.getElementById('audioModal').classList.add('show');
+        }
+
+        function hideAudioPlayer() {
+            document.getElementById('audioModal').classList.remove('show');
+            // 停止播放
+            if (isPlaying) {
+                togglePlay();
+            }
+        }
+
+        function togglePlay() {
+            isPlaying = !isPlaying;
+            const playIcon = document.getElementById('playIcon');
+            
+            if (isPlaying) {
+                playIcon.textContent = '⏸';
+                // 模拟播放进度
+                startProgress();
+            } else {
+                playIcon.textContent = '▶';
+                stopProgress();
+            }
+        }
+
+        function rewind() {
+            currentProgress = Math.max(0, currentProgress - 10);
+            updateProgress();
+        }
+
+        function fastForward() {
+            currentProgress = Math.min(100, currentProgress + 10);
+            updateProgress();
+        }
+
+        function seekTo(event) {
+            const progressBar = event.currentTarget;
+            const rect = progressBar.getBoundingClientRect();
+            const clickX = event.clientX - rect.left;
+            const percentage = (clickX / rect.width) * 100;
+            
+            currentProgress = Math.max(0, Math.min(100, percentage));
+            updateProgress();
+        }
+
+        function setVolume(event) {
+            const volumeBar = event.currentTarget;
+            const rect = volumeBar.getBoundingClientRect();
+            const clickX = event.clientX - rect.left;
+            const percentage = (clickX / rect.width) * 100;
+            
+            currentVolume = Math.max(0, Math.min(100, percentage));
+            updateVolume();
+        }
+
+        function updateProgress() {
+            const progressFill = document.getElementById('progressFill');
+            const progressThumb = document.getElementById('progressThumb');
+            const currentTimeSpan = document.getElementById('currentTime');
+            
+            progressFill.style.width = currentProgress + '%';
+            progressThumb.style.left = currentProgress + '%';
+            
+            const seconds = Math.floor((currentProgress / 100) * totalTime);
+            const minutes = Math.floor(seconds / 60);
+            const remainingSeconds = seconds % 60;
+            currentTimeSpan.textContent = `${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
+        }
+
+        function updateVolume() {
+            const volumeFill = document.getElementById('volumeFill');
+            const volumeText = document.getElementById('volumeText');
+            
+            volumeFill.style.width = currentVolume + '%';
+            volumeText.textContent = Math.round(currentVolume) + '%';
+        }
+
+        function startProgress() {
+            // 模拟播放进度更新
+            progressInterval = setInterval(() => {
+                if (currentProgress < 100) {
+                    currentProgress += 0.5;
+                    updateProgress();
+                } else {
+                    togglePlay(); // 播放完成
+                }
+            }, 100);
+        }
+
+        function stopProgress() {
+            if (progressInterval) {
+                clearInterval(progressInterval);
+            }
+        }
+
+        function downloadAudio() {
+            alert('下载录音文件功能');
+        }
+
+        function shareAudio() {
+            alert('分享录音功能');
+        }
+
+        function copyLink() {
+            alert('复制链接功能');
+        }
+
+        // 点击遮罩关闭弹窗
+        document.getElementById('audioModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                hideAudioPlayer();
+            }
+        });
+
+        // ESC键关闭弹窗
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                hideAudioPlayer();
+            }
+        });
+    </script>
+</body>
+</html>
