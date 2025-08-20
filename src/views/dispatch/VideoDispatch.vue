@@ -9,10 +9,10 @@
             <div class="device-list-header">
               <h3 class="section-title large-screen-text-primary">设备列表</h3>
               <div class="device-search">
-                <el-input v-model="deviceSearch" placeholder="搜索设备" clearable :prefix-icon="Search" />
+                <el-input v-model="deviceSearch" placeholder="搜索设备" clearable :prefix-icon="Search" size="small" />
               </div>
               <div class="device-filter">
-                <el-radio-group v-model="statusFilter" class="device-filter-group">
+                <el-radio-group v-model="statusFilter" class="device-filter-group" size="small">
                   <el-radio-button label="all">全部</el-radio-button>
                   <el-radio-button label="online">在线</el-radio-button>
                   <el-radio-button label="offline">离线</el-radio-button>
@@ -624,11 +624,11 @@ onMounted(() => {
 .device-list-header {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 8px; /* 减少间距从12px到8px */
 }
 
 .section-title {
-  margin: 0 0 8px 0;
+  margin: 0 0 4px 0; /* 减少底部边距从8px到4px */
   font-size: 18px;
   font-weight: 600;
   color: #303133;
@@ -649,7 +649,7 @@ onMounted(() => {
 }
 
 .device-search {
-  margin-bottom: 8px;
+  margin-bottom: 4px; /* 减少底部边距从8px到4px */
 }
 
 .device-tree-container {
@@ -1168,12 +1168,12 @@ onMounted(() => {
   border-radius: 0;
   background: #ffffff;
   color: #606266;
-  padding: 12px 20px;
+  padding: 8px 16px; /* 减少内边距从12px 20px到8px 16px */
   font-weight: 500;
-  font-size: 14px;
+  font-size: 13px; /* 减少字体大小从14px到13px */
   transition: all 0.25s ease;
   position: relative;
-  min-width: 60px;
+  min-width: 50px; /* 减少最小宽度从60px到50px */
   text-align: center;
 }
 
@@ -1304,9 +1304,18 @@ onMounted(() => {
 @media (max-width: 1200px) {
   .device-filter-group :deep(.el-radio-button__inner),
   .view-mode-group :deep(.el-radio-button__inner) {
-    padding: 10px 16px;
-    font-size: 13px;
-    min-width: 50px;
+    padding: 6px 12px; /* 进一步减少内边距 */
+    font-size: 12px; /* 减少字体大小 */
+    min-width: 45px; /* 减少最小宽度 */
+  }
+
+  .device-list-header {
+    gap: 6px; /* 在小屏幕下进一步减少间距 */
+  }
+
+  .section-title {
+    margin: 0 0 2px 0; /* 进一步减少标题底部边距 */
+    font-size: 16px; /* 减少标题字体大小 */
   }
 }
 </style>
