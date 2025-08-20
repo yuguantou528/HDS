@@ -268,7 +268,16 @@ const deviceTree = [
     children: [
       { id: '1', name: '执法仪#A01', type: 'body_camera', status: 'online', url: 'https://www.w3schools.com/html/mov_bbb.mp4' },
       { id: '4', name: '执法仪#A02', type: 'body_camera', status: 'offline', url: 'https://www.w3schools.com/html/movie.mp4' },
-      { id: '6', name: '执法仪#A03', type: 'body_camera', status: 'online', url: 'https://www.w3schools.com/html/mov_bbb.mp4' }
+      { id: '6', name: '执法仪#A03', type: 'body_camera', status: 'online', url: 'https://www.w3schools.com/html/mov_bbb.mp4' },
+      { id: '11', name: '执法仪#A04', type: 'body_camera', status: 'online', url: 'https://www.w3schools.com/html/mov_bbb.mp4' },
+      { id: '12', name: '执法仪#A05', type: 'body_camera', status: 'online', url: 'https://www.w3schools.com/html/movie.mp4' },
+      { id: '13', name: '执法仪#A06', type: 'body_camera', status: 'online', url: 'https://www.w3schools.com/html/mov_bbb.mp4' },
+      { id: '14', name: '执法仪#A07', type: 'body_camera', status: 'online', url: 'https://www.w3schools.com/html/movie.mp4' },
+      { id: '15', name: '执法仪#A08', type: 'body_camera', status: 'offline', url: 'https://www.w3schools.com/html/mov_bbb.mp4' },
+      { id: '16', name: '执法仪#A09', type: 'body_camera', status: 'online', url: 'https://www.w3schools.com/html/movie.mp4' },
+      { id: '17', name: '执法仪#A10', type: 'body_camera', status: 'online', url: 'https://www.w3schools.com/html/mov_bbb.mp4' },
+      { id: '18', name: '执法仪#A11', type: 'body_camera', status: 'online', url: 'https://www.w3schools.com/html/movie.mp4' },
+      { id: '19', name: '执法仪#A12', type: 'body_camera', status: 'online', url: 'https://www.w3schools.com/html/mov_bbb.mp4' }
     ]
   },
   {
