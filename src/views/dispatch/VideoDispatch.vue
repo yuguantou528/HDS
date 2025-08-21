@@ -48,6 +48,7 @@
                         <el-button
                           v-if="!isInView(data)"
                           type="primary"
+                          size="small"
                           class="large-screen-button"
                           :icon="Plus"
                           :disabled="data.status === 'offline'"
@@ -56,6 +57,7 @@
                         <el-button
                           v-else
                           type="danger"
+                          size="small"
                           class="large-screen-button"
                           :icon="Minus"
                           @click.stop="removeFromView(data)"
@@ -270,14 +272,7 @@ const deviceTree = [
       { id: '4', name: '执法仪#A02', type: 'body_camera', status: 'offline', url: 'https://www.w3schools.com/html/movie.mp4' },
       { id: '6', name: '执法仪#A03', type: 'body_camera', status: 'online', url: 'https://www.w3schools.com/html/mov_bbb.mp4' },
       { id: '11', name: '执法仪#A04', type: 'body_camera', status: 'online', url: 'https://www.w3schools.com/html/mov_bbb.mp4' },
-      { id: '12', name: '执法仪#A05', type: 'body_camera', status: 'online', url: 'https://www.w3schools.com/html/movie.mp4' },
-      { id: '13', name: '执法仪#A06', type: 'body_camera', status: 'online', url: 'https://www.w3schools.com/html/mov_bbb.mp4' },
-      { id: '14', name: '执法仪#A07', type: 'body_camera', status: 'online', url: 'https://www.w3schools.com/html/movie.mp4' },
-      { id: '15', name: '执法仪#A08', type: 'body_camera', status: 'offline', url: 'https://www.w3schools.com/html/mov_bbb.mp4' },
-      { id: '16', name: '执法仪#A09', type: 'body_camera', status: 'online', url: 'https://www.w3schools.com/html/movie.mp4' },
-      { id: '17', name: '执法仪#A10', type: 'body_camera', status: 'online', url: 'https://www.w3schools.com/html/mov_bbb.mp4' },
-      { id: '18', name: '执法仪#A11', type: 'body_camera', status: 'online', url: 'https://www.w3schools.com/html/movie.mp4' },
-      { id: '19', name: '执法仪#A12', type: 'body_camera', status: 'online', url: 'https://www.w3schools.com/html/mov_bbb.mp4' }
+      { id: '12', name: '执法仪#A05', type: 'body_camera', status: 'online', url: 'https://www.w3schools.com/html/movie.mp4' }
     ]
   },
   {
@@ -546,26 +541,9 @@ const canControlCurrentDevice = computed(() => {
   return stream && (stream.type === 'ptz' || stream.type === 'deploy_ball');
 });
 
-// 默认选中第一个设备
+// 组件挂载时初始化
 onMounted(() => {
-  // 预先添加一些设备到视图中作为演示
-  const firstDevice = deviceTree.flatMap(g => g.children).find(d => d.type === 'ptz');
-  const secondDevice = deviceTree.flatMap(g => g.children).find(d => d.type === 'deploy_ball');
-
-  if (firstDevice) {
-    addToView(firstDevice);
-  }
-
-  if (secondDevice) {
-    addToView(secondDevice);
-  }
-
-  // 初始化云台速度
-  selectedStreams.value.forEach(stream => {
-    if (stream.type === 'ptz' || stream.type === 'deploy_ball') {
-      ptzSpeeds.value[stream.id] = 5;
-    }
-  });
+  // 不再默认添加设备到视图中，让用户手动选择
 
   // 模拟设备状态变化
   setInterval(() => {

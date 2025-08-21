@@ -145,30 +145,11 @@ const routes: Array<RouteRecordRaw> = [
       requiresLayout: true
     }
   },
-  {
-    path: '/dispatch/location-dispatch',
-    name: 'LocationDispatch',
-    component: () => import('@/views/dispatch/LocationDispatch.vue'),
-    meta: {
-      title: '位置调度',
-      requiresAuth: true,
-      requiresLayout: true
-    }
-  },
-  {
-    path: '/dispatch/device-tracks',
-    name: 'DeviceTracks',
-    component: () => import('@/views/dispatch/DeviceTracks.vue'),
-    meta: {
-      title: '设备轨迹',
-      requiresAuth: true,
-      requiresLayout: true
-    }
-  },
+
   {
     path: '/system/users',
     name: 'Users',
-    component: () => import('@/views/Home.vue'), // 暂时使用Home组件
+    component: () => import('@/views/system/Users.vue'),
     meta: {
       title: '用户管理',
       requiresAuth: true,
@@ -178,7 +159,7 @@ const routes: Array<RouteRecordRaw> = [
   {
     path: '/system/roles',
     name: 'Roles',
-    component: () => import('@/views/Home.vue'), // 暂时使用Home组件
+    component: () => import('@/views/system/Roles.vue'),
     meta: {
       title: '角色管理',
       requiresAuth: true,
@@ -188,7 +169,7 @@ const routes: Array<RouteRecordRaw> = [
   {
     path: '/system/permissions',
     name: 'Permissions',
-    component: () => import('@/views/Home.vue'), // 暂时使用Home组件
+    component: () => import('@/views/system/Permissions.vue'),
     meta: {
       title: '权限管理',
       requiresAuth: true,
@@ -198,7 +179,7 @@ const routes: Array<RouteRecordRaw> = [
   {
     path: '/profile',
     name: 'Profile',
-    component: () => import('@/views/Home.vue'), // 暂时使用Home组件
+    component: () => import('@/views/Profile.vue'),
     meta: {
       title: '个人中心',
       requiresAuth: true,

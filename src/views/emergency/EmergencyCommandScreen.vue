@@ -204,30 +204,19 @@ const switchModule = (module: string) => {
 }
 
 .time-display {
-  background: linear-gradient(135deg,
-    rgba(64, 158, 255, 0.15) 0%,
-    rgba(64, 158, 255, 0.05) 100%);
-  border: 1px solid rgba(64, 158, 255, 0.3);
-  border-radius: 12px;
-  padding: 12px 16px;
-  backdrop-filter: blur(10px);
-  box-shadow:
-    0 4px 12px rgba(0, 0, 0, 0.2),
-    0 1px 0 rgba(255, 255, 255, 0.1) inset;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  padding: 8px 0;
+  backdrop-filter: none;
+  box-shadow: none;
   color: #ffffff;
   text-align: left;
   position: relative;
   overflow: hidden;
 }
 
-.time-display::before {
-  content: '🕐';
-  position: absolute;
-  top: -5px;
-  right: -5px;
-  font-size: 12px;
-  opacity: 0.3;
-}
+/* 移除时间图标装饰 */
 
 .time-display .date {
   font-size: 13px;
@@ -320,16 +309,12 @@ const switchModule = (module: string) => {
 }
 
 .weather-display {
-  background: linear-gradient(135deg,
-    rgba(255, 193, 7, 0.15) 0%,
-    rgba(255, 152, 0, 0.05) 100%);
-  border: 1px solid rgba(255, 193, 7, 0.3);
-  border-radius: 12px;
-  padding: 12px 16px;
-  backdrop-filter: blur(10px);
-  box-shadow:
-    0 4px 12px rgba(0, 0, 0, 0.2),
-    0 1px 0 rgba(255, 255, 255, 0.1) inset;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  padding: 8px 0;
+  backdrop-filter: none;
+  box-shadow: none;
   display: flex;
   align-items: center;
   gap: 12px;
@@ -338,18 +323,7 @@ const switchModule = (module: string) => {
   overflow: hidden;
 }
 
-.weather-display::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: radial-gradient(circle at 20% 20%,
-    rgba(255, 193, 7, 0.1) 0%,
-    transparent 50%);
-  pointer-events: none;
-}
+/* 移除天气背景装饰 */
 
 .weather-icon {
   font-size: 28px;
@@ -497,8 +471,8 @@ const switchModule = (module: string) => {
 
   .time-display,
   .weather-display {
-    padding: 10px 14px;
-    border-radius: 10px;
+    padding: 8px 0;
+    border-radius: 0;
   }
 
   .header-center {

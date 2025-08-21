@@ -48,8 +48,6 @@
         <el-menu-item index="/dispatch/recordings">视频录像</el-menu-item>
         <el-menu-item index="/dispatch/conference">视频会商</el-menu-item>
         <el-menu-item index="/dispatch/meeting-records">会商记录</el-menu-item>
-        <el-menu-item index="/dispatch/location-dispatch">位置调度</el-menu-item>
-        <el-menu-item index="/dispatch/device-tracks">设备轨迹</el-menu-item>
       </el-sub-menu>
       
       <el-sub-menu index="/system">

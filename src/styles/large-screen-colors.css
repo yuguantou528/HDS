@@ -519,7 +519,8 @@
   /* 1920px屏幕图标尺寸 */
   .large-screen-button .el-icon,
   .table-action-btn .el-icon,
-  .member-action-btn .el-icon {
+  .member-action-btn .el-icon,
+  .chat-tools .el-button .el-icon {
     font-size: 13px !important;
   }
 }

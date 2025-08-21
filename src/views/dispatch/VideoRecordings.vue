@@ -73,7 +73,7 @@
           >
             <el-table-column type="index" label="序号" width="60" align="center" />
             <el-table-column prop="deviceName" label="设备" min-width="120" />
-            <el-table-column prop="type" label="类型" width="100">
+            <el-table-column prop="type" label="类型" width="120">
               <template #default="scope">
                 <el-tag :type="getDeviceTagType(scope.row.type)" class="large-screen-tag">{{ getDeviceTypeLabel(scope.row.type) }}</el-tag>
               </template>
@@ -584,7 +584,13 @@ watch(playbackProgress, (newVal) => {
 :deep(.search-form .el-form-item:last-child .el-form-item__content) {
   display: flex;
   justify-content: center;
+  align-items: center;
   width: 100%;
+}
+
+/* 确保查询和重置按钮完全居中 */
+:deep(.search-form .el-form-item:last-child) {
+  text-align: center;
 }
 
 /* 表格样式 */
@@ -801,7 +807,7 @@ watch(playbackProgress, (newVal) => {
 
 :deep(.detail-card .el-card__body) {
   flex: 1;
-  overflow-y: auto;
+  overflow: hidden; /* 移除滚动条，改为隐藏溢出内容 */
   display: flex;
   flex-direction: column;
   padding: 12px;

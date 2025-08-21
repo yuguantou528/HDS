@@ -511,10 +511,10 @@
                     </el-icon>
                     {{ m.silenced ? '解音' : '静音' }}
                   </el-button>
-                  <el-button type="success" class="large-screen-button member-action-btn" @click="setHost(m)" :disabled="meetingStore.activeMeeting.status !== '进行中' || m.id === meetingStore.activeMeeting.hostId">
+                  <el-button type="success" class="large-screen-button member-action-btn host-btn" @click="confirmSetHost(m)" :disabled="meetingStore.activeMeeting.status !== '进行中' || m.id === meetingStore.activeMeeting.hostId">
                     <el-icon><TopRight /></el-icon>转主持
                   </el-button>
-                  <el-button type="danger" class="large-screen-button member-action-btn" @click="removeMember(m)" :disabled="meetingStore.activeMeeting.status !== '进行中'">
+                  <el-button type="danger" class="large-screen-button member-action-btn remove-btn" @click="removeMember(m)" :disabled="meetingStore.activeMeeting.status !== '进行中'">
                     <el-icon><Delete /></el-icon>移除
                   </el-button>
                 </el-button-group>
@@ -565,7 +565,7 @@
           <div class="chat-tools">
             <el-tooltip content="发送图片" placement="top">
               <el-button
-                class="large-screen-button"
+                size="small"
                 circle
               >
                 <el-icon><PictureFilled /></el-icon>
@@ -911,7 +911,7 @@
 
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted, nextTick } from 'vue';
-import { ElMessage } from 'element-plus';
+import { ElMessage, ElMessageBox } from 'element-plus';
 import { useMeetingStore } from '@/store/meeting';
 import {
   Plus, Calendar, Delete, UserFilled, Microphone, CircleClose,
@@ -1692,24 +1692,83 @@ function toggleMemberCamera(member: any) {
   scrollToBottom();
 }
 
+// 转主持确认对话框
+function confirmSetHost(member: any) {
+  if (!meetingStore.activeMeeting) return;
+
+  // 构建权限列表HTML
+  const permissionsList = `
+    <div style="text-align: left; margin: 16px 0;">
+      <p style="margin-bottom: 12px; font-weight: 600; color: #303133;">转让的主要权限包括：</p>
+      <ul style="margin: 0; padding-left: 20px; color: #606266; line-height: 1.8;">
+        <li><strong>会议管理权限：</strong>结束会议、邀请/移除成员</li>
+        <li><strong>音视频控制权限：</strong>全体禁言、单独禁言/静音、摄像头控制</li>
+        <li><strong>录像管理权限：</strong>开始/停止录像</li>
+        <li><strong>会议秩序维护权限：</strong>话权管理、发言控制</li>
+      </ul>
+    </div>
+  `;
+
+  ElMessageBox.confirm(
+    `
+    <div style="text-align: center;">
+      <p style="margin-bottom: 16px; font-size: 16px; color: #303133;">
+        确定要将主持人权限转让给 <strong style="color: #409EFF;">${member.name}</strong> 吗？
+      </p>
+      ${permissionsList}
+      <p style="margin-top: 16px; color: #909399; font-size: 14px;">
+        转让后，您将失去主持人权限，该操作不可撤销。
+      </p>
+    </div>
+    `,
+    '转让主持人权限',
+    {
+      confirmButtonText: '确认转让',
+      cancelButtonText: '取消',
+      type: 'warning',
+      dangerouslyUseHTMLString: true,
+      confirmButtonClass: 'el-button--warning',
+      customClass: 'transfer-host-dialog',
+      beforeClose: (action, instance, done) => {
+        if (action === 'confirm') {
+          instance.confirmButtonLoading = true;
+          instance.confirmButtonText = '转让中...';
+
+          // 模拟转让过程
+          setTimeout(() => {
+            setHost(member);
+            instance.confirmButtonLoading = false;
+            done();
+          }, 500);
+        } else {
+          done();
+        }
+      }
+    }
+  ).catch(() => {
+    // 用户取消操作
+    console.log('用户取消转让主持人权限');
+  });
+}
+
 function setHost(member: any) {
   if (!meetingStore.activeMeeting) return;
   const oldHost = meetingStore.activeMeeting.host;
   meetingStore.activeMeeting.host = member.name;
   meetingStore.activeMeeting.hostId = member.id;
-  
+
   // 添加系统消息
   const now = new Date();
   const time = now.toLocaleTimeString('zh-CN', { hour12: false });
   meetingStore.addChatMessage({
     id: Date.now(),
     user: '系统',
-    text: `${oldHost} 将主持人转让给 ${member.name}`,
+    text: `🔄 ${oldHost} 已将主持人权限转让给 ${member.name}，${member.name} 现在是会议主持人`,
     time
   });
   scrollToBottom();
-  
-  ElMessage.success('已转为主持人');
+
+  ElMessage.success(`已成功转让主持人权限给 ${member.name}`);
 }
 
 function getMemberAvatarStyle(m: any) {
@@ -1786,6 +1845,8 @@ function calcMeetingDuration(meeting: any) {
   padding: 20px;
   gap: 20px;
   overflow: hidden;
+  /* 轻微整体上移，避免影响其它页面 */
+  transform: translateY(-6px);
 }
 
 .conference-list {
@@ -2026,8 +2087,12 @@ function calcMeetingDuration(meeting: any) {
 
 .video-area {
   flex: 1;
-  margin-bottom: 20px;
+  margin-bottom: 4px; /* 进一步减少底部间距 */
   min-height: 300px;
+  max-height: calc(100vh - 260px); /* 进一步调整最大高度，增加视频区域空间 */
+  overflow: hidden; /* 隐藏超出部分 */
+  display: flex;
+  flex-direction: column;
 }
 
 .main-video {
@@ -2183,21 +2248,34 @@ function calcMeetingDuration(meeting: any) {
   align-items: center;
   font-size: 14px;
   padding: 0 6px;
+  min-width: 0; /* 允许收缩，避免各行起点不一致 */
 }
 
 .member-col.name {
-  flex: 2;
+  flex: 0 0 200px; /* 固定“成员”列宽，确保各行对齐 */
 }
 
 .member-col.status {
-  flex: 1;
-  justify-content: center;
+  flex: 0 0 180px; /* 固定“状态”列宽，避免因标签数量不同而挤压 */
+  justify-content: flex-start; /* 左对齐 */
+  gap: 6px; /* 标签之间留空 */
+  white-space: nowrap; /* 防止换行导致行高不一致 */
 }
 
 .member-col.ops {
-  flex: 3;
-  gap: 5px;
-  justify-content: flex-start;
+  flex: 1;
+  display: flex; /* 显式flex容器，避免内部布局受影响 */
+  align-items: center;
+  min-width: 620px; /* 确保可容纳5个按钮+间距，防止最后一个换行 */
+}
+.member-col.ops > .el-button-group {
+  display: flex; /* 改回单行flex布局 */
+  flex-wrap: nowrap; /* 禁止换行，避免按钮掉到下一行 */
+  gap: 6px;
+  width: 100%;
+}
+.member-col.ops > .el-button-group .el-button {
+  flex: 0 0 100px; /* 基础按钮宽度缩小 */
 }
 
 :deep(.el-button-group .el-button) {
@@ -2339,11 +2417,11 @@ function calcMeetingDuration(meeting: any) {
 }
 
 :deep(.el-button--small) {
-  padding: 8px 15px;
+  padding: 6px 10px; /* 统一小按钮的内边距 */
 }
 
 :deep(.el-button.is-circle) {
-  padding: 8px;
+  padding: 6px; /* 圆形按钮与小按钮一致 */
 }
 
 @media (max-width: 1400px) {
@@ -2488,7 +2566,7 @@ function calcMeetingDuration(meeting: any) {
 
 /* 录像区域样式 */
 .recording-section {
-  margin-bottom: 30px;
+  margin-bottom: 20px; /* 调矮一丢丢：从30px减少到20px */
 }
 
 .section-header {
@@ -2508,7 +2586,7 @@ function calcMeetingDuration(meeting: any) {
   background: #f8f9fa;
   border: 1px solid #e9ecef;
   border-radius: 8px;
-  padding: 20px;
+  padding: 16px; /* 调矮一丢丢：从20px减少到16px */
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -2707,7 +2785,7 @@ function calcMeetingDuration(meeting: any) {
 .recording-detail {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 16px; /* 调矮一丢丢：从20px减少到16px */
 }
 
 .recording-file-info {
@@ -2799,7 +2877,7 @@ function calcMeetingDuration(meeting: any) {
 .video-wrapper {
   position: relative;
   width: 100%;
-  height: 500px;
+  height: 450px; /* 调矮一丢丢：从500px减少到450px */
   background: #000;
   border-radius: 8px;
   overflow: hidden;
@@ -2896,7 +2974,7 @@ function calcMeetingDuration(meeting: any) {
   }
 
   .video-wrapper {
-    height: 300px;
+    height: 270px; /* 调矮一丢丢：从300px减少到270px */
   }
 
   .video-controls-bar {
@@ -3025,20 +3103,24 @@ function calcMeetingDuration(meeting: any) {
 .video-grid-container {
   width: 100%;
   height: 100%;
-  padding: 16px;
+  max-height: 100%; /* 确保不超出父容器 */
+  padding: 8px 12px 4px 12px; /* 进一步减少内边距 */
   background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
   border-radius: 12px;
   box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.1);
+  overflow: hidden; /* 隐藏超出部分 */
+  box-sizing: border-box; /* 包含padding在内的尺寸计算 */
 }
 
 .video-grid.asymmetric-layout {
   display: grid;
   grid-template-columns: 2fr 1fr 1fr;
   grid-template-rows: 1fr 1fr 1fr;
-  gap: 12px;
+  gap: 10px; /* 减少网格间距 */
   width: 100%;
-  height: 100%;
-  min-height: 400px;
+  height: calc(100% - 12px); /* 调整为新的padding总和：8px + 4px = 12px */
+  max-height: calc(100% - 12px); /* 确保不超出容器 */
+  min-height: 350px; /* 减小最小高度 */
 }
 
 /* 主讲人区域 - 占据左侧大部分空间 */
@@ -3413,7 +3495,8 @@ function calcMeetingDuration(meeting: any) {
   .video-grid.asymmetric-layout {
     grid-template-columns: 1.6fr 1fr 1fr;
     gap: 8px;
-    min-height: 350px;
+    min-height: 300px; /* 减小最小高度 */
+    max-height: calc(100% - 32px); /* 确保不超出容器 */
   }
 
   .video-actions .el-button {
@@ -3435,7 +3518,8 @@ function calcMeetingDuration(meeting: any) {
   .video-grid.asymmetric-layout {
     grid-template-columns: 1fr;
     grid-template-rows: 2fr 1fr 1fr 1fr 1fr 1fr;
-    min-height: 600px;
+    min-height: 500px; /* 减小最小高度 */
+    max-height: calc(100% - 24px); /* 确保不超出容器 */
   }
 
   .video-cell.main-speaker {
@@ -3444,7 +3528,7 @@ function calcMeetingDuration(meeting: any) {
   }
 
   .video-grid-container {
-    padding: 12px;
+    padding: 6px 8px 3px 8px; /* 响应式下进一步减少内边距 */
   }
 }
 
@@ -3844,18 +3928,75 @@ function calcMeetingDuration(meeting: any) {
   box-shadow: none !important;
 }
 
+/* 转主持确认对话框样式 */
+:deep(.transfer-host-dialog) {
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+:deep(.transfer-host-dialog .el-message-box__header) {
+  background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+  border-bottom: 1px solid #e1e8ed;
+  padding: 20px 24px 16px;
+}
+
+:deep(.transfer-host-dialog .el-message-box__title) {
+  color: #1f2937;
+  font-weight: 600;
+  font-size: 18px;
+}
+
+:deep(.transfer-host-dialog .el-message-box__content) {
+  padding: 20px 24px;
+}
+
+:deep(.transfer-host-dialog .el-message-box__btns) {
+  padding: 16px 24px 20px;
+  border-top: 1px solid #e1e8ed;
+  background: #fafbfc;
+}
+
+:deep(.transfer-host-dialog ul li) {
+  margin-bottom: 8px;
+}
+
+:deep(.transfer-host-dialog ul li:last-child) {
+  margin-bottom: 0;
+}
+
 /* 成员操作按钮组布局优化 */
 .member-col.ops .el-button-group {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
+  display: flex; /* 使用单行flex，避免换行导致错位 */
+  flex-wrap: nowrap;
+  gap: 6px;
+  align-items: center;
+  height: 28px; /* 统一按钮组高度 */
+}
+/* 清理 Element Plus 按钮组伪元素，避免占位 */
+.member-col.ops .el-button-group::before,
+.member-col.ops .el-button-group::after {
+  display: none !important;
+  content: none !important;
 }
 
 .member-col.ops .el-button-group .el-button {
   margin: 0 !important;
-  flex: 1;
-  min-width: 100px;
+  flex: 0 0 100px; /* 基础按钮宽度缩小 */
+  height: 28px;
+  font-size: 11px;
+  padding: 4px 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  box-sizing: border-box;
 }
+/* 针对不同按钮微调宽度 */
+.member-col.ops .el-button-group .camera-btn { flex-basis: 120px; }
+.member-col.ops .el-button-group .mute-btn { flex-basis: 88px; }
+.member-col.ops .el-button-group .silence-btn { flex-basis: 88px; }
+.member-col.ops .el-button-group .host-btn { flex-basis: 88px; }
+.member-col.ops .el-button-group .remove-btn { flex-basis: 88px; }
 
 /* 响应式优化 - 成员操作按钮 */
 @media (max-width: 1400px) {
@@ -3866,9 +4007,21 @@ function calcMeetingDuration(meeting: any) {
 }
 
 @media (max-width: 1200px) {
-  .member-col.ops .el-button-group .el-button {
-    min-width: 80px;
-    font-size: 11px !important;
+  .member-col.ops .el-button-group {
+    flex-wrap: nowrap;
+    gap: 4px;
+    height: 26px;
   }
+  .member-col.ops .el-button-group .el-button {
+    flex: 0 0 92px; /* 小屏下缩小基础宽度 */
+    height: 26px;
+    font-size: 10px !important;
+    padding: 3px 4px !important;
+  }
+  .member-col.ops .el-button-group .camera-btn { flex-basis: 108px; }
+  .member-col.ops .el-button-group .mute-btn,
+  .member-col.ops .el-button-group .silence-btn,
+  .member-col.ops .el-button-group .host-btn,
+  .member-col.ops .el-button-group .remove-btn { flex-basis: 82px; }
 }
 </style>
